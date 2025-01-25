@@ -3,8 +3,8 @@
 1. Backend
 2. Frontend
 
-Backend : nodejs
-Frontend : React
+Backend : nodejs, groq(Free llm api), 
+Frontend : React, zustand(state management), monaco(browser based code editor)
 
 ## Backend
 
@@ -15,12 +15,6 @@ Frontend : React
 ## Frontend
 
 -   / : to render the home page
--   /code : to render the generated ui code
-
-
-## LLM
-
--   GROQ (LLAMA 3.1)
 
 ## Running the project
 
@@ -34,7 +28,6 @@ Frontend : React
 
 ## Future Scope
 
--   Add more LLMs
 -   Add more templates
 -   Add User Space for history of user's projects
 -   Add Authentication

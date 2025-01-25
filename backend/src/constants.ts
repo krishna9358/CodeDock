@@ -1,6 +1,6 @@
 export const WORK_DIR_NAME = 'project';
 export const WORK_DIR = `/home/${WORK_DIR_NAME}`;
-export const MODIFICATIONS_TAG_NAME = 'dock_file_modifi cations';
+export const MODIFICATIONS_TAG_NAME = 'dock_file_modifications';
 
 export const allowedHTMLElements = [
     'a',

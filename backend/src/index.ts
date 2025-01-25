@@ -71,7 +71,7 @@ app.post("/chat", async (req, res) => {
     stream: true,
   });
 
-  // ! This is optional part , creating it just for the sake of streaming otherwise it is not needed.
+  // ? This is optional part , creating it just for the sake of streaming otherwise it is not needed.
   let result = "";
   for await (const chunk of response) {
     result += chunk.choices[0]?.delta?.content || ""; // to write the response to the console without a new line

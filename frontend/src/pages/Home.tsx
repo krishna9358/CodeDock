@@ -59,7 +59,7 @@ export function Home() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Describe the website you want to build..."
-                className="w-full h-32 p-4 bg-white/50 text-gray-200 border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-700 focus:border-transparent resize-none placeholder-gray-600 transition-all duration-300 hover:border-gray-700"
+                className="w-full h-32 p-4 bg-white/50 text-black border border-gray-800 rounded-lg focus:ring-2 focus:ring-gray-700 focus:border-transparent resize-none placeholder-gray-600 transition-all duration-300 hover:border-gray-700"
               />
               <button
                 type="submit"

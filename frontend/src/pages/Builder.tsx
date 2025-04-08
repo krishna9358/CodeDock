@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation} from 'react-router-dom';
 import { StepsList } from '../components/StepsList';
 import { FileExplorer } from '../components/FileExplorer';
-import { TabView } from '../components/TabView';
 import { CodeEditor } from '../components/CodeEditor';
 import { PreviewFrame } from '../components/PreviewFrame';
 import { Step, FileItem, StepType } from '../types';
@@ -10,19 +9,9 @@ import axios from 'axios';
 import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
-import { FileNode } from '@webcontainer/api';
 import { Loader } from '../components/Loader';
-import { Code2, Eye, Menu, Plus, Terminal, Settings, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Code2, Eye, Menu, Plus, Terminal, Settings, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-
-const MOCK_FILE_CONTENT = `// This is a sample file content
-import React from 'react';
-
-function Component() {
-  return <div>Hello World</div>;
-}
-
-export default Component;`;
 
 export function Builder() {
   const location = useLocation();
@@ -199,19 +188,19 @@ export function Builder() {
   }, [])
 
   // Show loading state while WebContainer initializes
-  if (!webcontainer) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/95 to-background/90">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 blur-xl opacity-20 animate-pulse"></div>
-            <Loader />
-          </div>
-          <p className="text-lg text-muted-foreground animate-pulse">Initializing environment...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (!webcontainer) {
+  //   return (
+  //     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/95 to-background/90">
+  //       <div className="text-center space-y-4">
+  //         <div className="relative">
+  //           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 blur-xl opacity-20 animate-pulse"></div>
+  //           <Loader />
+  //         </div>
+  //         <p className="text-lg text-muted-foreground animate-pulse">Initializing environment...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background/95 to-background/90">

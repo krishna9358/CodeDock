@@ -1,5 +1,5 @@
 require("dotenv").config();
-import express from "express";
+import express, { Request, Response } from "express";
 import Groq from "groq-sdk";
 import { BASE_PROMPT, getSystemPrompt } from "./prompts";
 import {basePrompt as nodeBasePrompt} from "./defaults/node";
@@ -11,7 +11,7 @@ const app = express();
 app.use(cors())
 app.use(express.json())
 
-app.post("/template", async (req, res) => {
+app.post("/template", async (req: Request, res: Response) => {
     const prompt = req.body.prompt;
     
     const response = await groq.chat.completions.create({
@@ -51,7 +51,7 @@ app.post("/template", async (req, res) => {
     return;
 })
 
-app.post("/chat", async (req, res) => {
+app.post("/chat", async (req: Request, res: Response) => {
     const messages = req.body.messages;
     const systemPrompt = getSystemPrompt();
     

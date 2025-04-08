@@ -73,7 +73,7 @@ export function FileExplorer({ files, selectedFile, onFileSelect }: FileExplorer
     return filteredItems.map((item) => {
       const isExpanded = expandedFolders.has(item.path);
       const isSelected = selectedFile?.path === item.path;
-      const paddingLeft = `${level * 1.25}rem`;
+      const paddingLeft = `${level * 0.75}rem`;
       const isFolder = item.type === 'folder';
       const hasChildren = isFolder && item.children && item.children.length > 0;
 
@@ -82,30 +82,25 @@ export function FileExplorer({ files, selectedFile, onFileSelect }: FileExplorer
           <div key={item.path} className="group">
             <button
               onClick={() => toggleFolder(item.path)}
-              className={`w-full flex items-center px-2 py-1.5 rounded-lg transition-all duration-200 ${
-                isSelected ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-gray-800/50 text-gray-300'
+              className={`w-full flex items-center h-6 text-sm transition-colors ${
+                isSelected ? 'bg-[#37373D] text-white' : 'hover:bg-[#2D2D2D] text-gray-400'
               }`}
               style={{ paddingLeft }}
             >
               <div className="flex items-center flex-1 min-w-0">
-                <div className="mr-1 flex-shrink-0">
+                <div className="mr-1 flex-shrink-0 w-4 h-4 flex items-center justify-center">
                   {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-400" />
+                    <ChevronDown className="w-3 h-3 text-gray-500 group-hover:text-gray-400" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-gray-500 group-hover:text-gray-400" />
+                    <ChevronRight className="w-3 h-3 text-gray-500 group-hover:text-gray-400" />
                   )}
                 </div>
-                <Folder className="w-4 h-4 mr-2 flex-shrink-0 text-indigo-400" />
-                <span className="truncate">{item.name}</span>
-                {hasChildren && (
-                  <span className="ml-2 text-xs text-gray-500 bg-gray-800/50 px-1.5 py-0.5 rounded-full">
-                    {item.children?.length}
-                  </span>
-                )}
+                <Folder className="w-4 h-4 mr-1.5 flex-shrink-0 text-[#6B9FFF]" />
+                <span className="truncate text-inherit">{item.name}</span>
               </div>
             </button>
             {isExpanded && item.children && (
-              <div className="mt-1">
+              <div>
                 {renderFileTree(item.children, level + 1)}
               </div>
             )}
@@ -117,14 +112,16 @@ export function FileExplorer({ files, selectedFile, onFileSelect }: FileExplorer
         <button
           key={item.path}
           onClick={() => onFileSelect(item)}
-          className={`w-full flex items-center px-2 py-1.5 rounded-lg transition-all duration-200 ${
-            isSelected ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-gray-800/50 text-gray-300'
+          className={`w-full flex items-center h-6 text-sm transition-colors ${
+            isSelected ? 'bg-[#37373D] text-white' : 'hover:bg-[#2D2D2D] text-gray-400'
           }`}
-          style={{ paddingLeft: `calc(${paddingLeft} + 1.25rem)` }}
+          style={{ paddingLeft: `calc(${paddingLeft} + 1rem)` }}
         >
           <div className="flex items-center flex-1 min-w-0">
-            {getFileIcon(item.name)}
-            <span className="ml-2 truncate">{item.name}</span>
+            <div className="w-4 h-4 mr-1.5 flex-shrink-0">
+              {getFileIcon(item.name)}
+            </div>
+            <span className="truncate text-inherit">{item.name}</span>
           </div>
         </button>
       );
@@ -133,18 +130,24 @@ export function FileExplorer({ files, selectedFile, onFileSelect }: FileExplorer
 
   return (
     <div className="h-full flex flex-col">
+      <div className="mb-2">
+        <h2 className="px-2 py-1 text-[11px] font-medium uppercase text-gray-500">Explorer</h2>
+      </div>
+      
       {/* Search Bar */}
-      <div className="relative mb-4">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-gray-500" />
+      <div className="px-2 mb-2">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+            <Search className="h-3 w-3 text-gray-500" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search files..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-7 pr-2 py-1 bg-[#3C3C3C] text-xs text-gray-300 placeholder-gray-500 rounded border border-transparent focus:outline-none focus:border-[#007ACC]"
+          />
         </div>
-        <input
-          type="text"
-          placeholder="Search files..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-9 pr-3 py-1.5 bg-gray-800/50 border border-gray-700/50 rounded-lg text-sm text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-        />
       </div>
       
       {/* File Tree */}

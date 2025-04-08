@@ -1,4 +1,4 @@
-require("dotenv").config();
+import "dotenv/config";
 import express, { Request, Response } from "express";
 import Groq from "groq-sdk";
 import { BASE_PROMPT, getSystemPrompt } from "./prompts";

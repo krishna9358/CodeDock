@@ -25,7 +25,7 @@ app.post("/template", async (req, res) => {
                 content: prompt
             }
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: 'qwen-2.5-coder-32b',
         max_tokens: 200,
         temperature: 0
     })
@@ -63,7 +63,7 @@ app.post("/chat", async (req, res) => {
             },
             ...messages
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: 'qwen-2.5-coder-32b',
         max_tokens: 8000,
         temperature: 0
     })

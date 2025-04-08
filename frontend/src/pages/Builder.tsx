@@ -12,7 +12,6 @@ import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { FileNode } from '@webcontainer/api';
 import { Loader } from '../components/Loader';
-import { Code2, Eye, Menu, Plus, Terminal, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MOCK_FILE_CONTENT = `// This is a sample file content
 import React from 'react';
@@ -37,12 +36,8 @@ export function Builder() {
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   
   const [steps, setSteps] = useState<Step[]>([]);
+
   const [files, setFiles] = useState<FileItem[]>([]);
-  
-  // UI state
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [fileExplorerCollapsed, setFileExplorerCollapsed] = useState(false);
-  const [previewMaximized, setPreviewMaximized] = useState(false);
 
   useEffect(() => {
     let originalFiles = [...files];
@@ -196,119 +191,74 @@ export function Builder() {
   }, [])
 
   return (
-    <div className="h-screen flex flex-col bg-[#1E1E1E] text-gray-100">
-      {/* Top Navigation Bar */}
-      <div className="h-12 border-b border-[#2D2D2D] flex items-center px-4 justify-between bg-[#1E1E1E]">
-        <div className="flex items-center space-x-4">
-          <button className="hover:bg-[#2D2D2D] p-1.5 rounded">
-            <Menu className="w-5 h-5 text-gray-400" />
-          </button>
-          <button className="flex items-center space-x-2 px-2 py-1 hover:bg-[#2D2D2D] rounded text-sm">
-            <Plus className="w-4 h-4" />
-            <span>New Chat</span>
-          </button>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setActiveTab('code')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded text-sm ${
-              activeTab === 'code' 
-                ? 'bg-[#2D2D2D] text-white' 
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
-          >
-            <Code2 className="w-4 h-4" />
-            <span>Code</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={`flex items-center space-x-2 px-3 py-1.5 rounded text-sm ${
-              activeTab === 'preview' 
-                ? 'bg-[#2D2D2D] text-white' 
-                : 'text-gray-400 hover:text-gray-300'
-            }`}
-          >
-            <Eye className="w-4 h-4" />
-            <span>Preview</span>
-          </button>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button className="hover:bg-[#2D2D2D] p-1.5 rounded">
-            <Terminal className="w-5 h-5 text-gray-400" />
-          </button>
-          <button className="hover:bg-[#2D2D2D] p-1.5 rounded">
-            <Settings className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-900 flex flex-col">
+      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <h1 className="text-xl font-semibold text-gray-100">Website Builder</h1>
+        <p className="text-sm text-gray-400 mt-1">Prompt: {prompt}</p>
+      </header>
+      
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full grid grid-cols-4 gap-6 p-6">
+          <div className="col-span-1 space-y-6 overflow-auto">
+            <div>
+              <div className="max-h-[75vh] overflow-scroll">
+                <StepsList
+                  steps={steps}
+                  currentStep={currentStep}
+                  onStepClick={setCurrentStep}
+                />
+              </div>
+              <div>
+                <div className='flex'>
+                  <br />
+                  {(loading || !templateSet) && <Loader />}
+                  {!(loading || !templateSet) && <div className='flex'>
+                    <textarea value={userPrompt} onChange={(e) => {
+                    setPrompt(e.target.value)
+                  }} className='p-2 w-full'></textarea>
+                  <button onClick={async () => {
+                    const newMessage = {
+                      role: "user" as "user",
+                      content: userPrompt
+                    };
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Explorer */}
-        <div className={`w-64 border-r border-[#2D2D2D] bg-[#1E1E1E] flex flex-col`}>
-          <div className="flex-1 overflow-hidden">
-            <div className="p-4">
-              <FileExplorer
-                files={files}
-                selectedFile={selectedFile}
+                    setLoading(true);
+                    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+                      messages: [...llmMessages, newMessage]
+                    });
+                    setLoading(false);
+
+                    setLlmMessages(x => [...x, newMessage]);
+                    setLlmMessages(x => [...x, {
+                      role: "assistant",
+                      content: stepsResponse.data.response
+                    }]);
+                    
+                    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
+                      ...x,
+                      status: "pending" as "pending"
+                    }))]);
+
+                  }} className='bg-purple-400 px-4'>Send</button>
+                  </div>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="col-span-1">
+              <FileExplorer 
+                files={files} 
                 onFileSelect={setSelectedFile}
               />
             </div>
-          </div>
-        </div>
-
-        {/* Main Editor Area */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Editor Header */}
-          <div className="h-9 border-b border-[#2D2D2D] flex items-center px-4 bg-[#1E1E1E]">
-            <div className="flex items-center space-x-2">
+          <div className="col-span-2 bg-gray-900 rounded-lg shadow-lg p-4 h-[calc(100vh-8rem)]">
+            <TabView activeTab={activeTab} onTabChange={setActiveTab} />
+            <div className="h-[calc(100%-4rem)]">
               {activeTab === 'code' ? (
-                <>
-                  <Code2 className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm">
-                    {selectedFile ? selectedFile.name : 'Select a file to edit'}
-                  </span>
-                </>
+                <CodeEditor file={selectedFile} />
               ) : (
-                <>
-                  <Eye className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm">Preview</span>
-                </>
+                <PreviewFrame webContainer={webcontainer} files={files} />
               )}
-            </div>
-          </div>
-
-          {/* Editor Content */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'code' ? (
-              <CodeEditor
-                file={selectedFile}
-                onChange={(content) => {
-                  if (selectedFile) {
-                    setFiles(files.map(f => 
-                      f.path === selectedFile.path 
-                        ? { ...f, content } 
-                        : f
-                    ));
-                  }
-                }}
-              />
-            ) : (
-              <PreviewFrame />
-            )}
-          </div>
-        </div>
-
-        {/* Right Sidebar - Steps */}
-        <div className={`w-80 border-l border-[#2D2D2D] bg-[#1E1E1E] flex flex-col`}>
-          <div className="flex-1 overflow-hidden">
-            <div className="p-4">
-              <h2 className="text-sm font-medium text-gray-400 mb-4">Build Steps</h2>
-              <StepsList 
-                steps={steps} 
-                currentStep={currentStep}
-                onStepClick={setCurrentStep}
-              />
             </div>
           </div>
         </div>

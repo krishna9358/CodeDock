@@ -8,8 +8,21 @@ import cors from "cors";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const app = express();
-app.use(cors())
-app.use(express.json())
+
+// Configure CORS
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Health check endpoint
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({ status: "ok" });
+});
 
 app.post("/template", async (req: Request, res: Response) => {
     const prompt = req.body.prompt;

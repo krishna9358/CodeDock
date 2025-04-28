@@ -10,18 +10,13 @@ export default defineConfig({
   server: {
     headers: {
       "Cross-Origin-Embedder-Policy": "require-corp",
-      "Cross-Origin-Opener-Policy": "same-origin",
-      "Cross-Origin-Resource-Policy": "cross-origin",
-      "Access-Control-Allow-Origin": "http://localhost:3000",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With"
+      "Cross-Origin-Opener-Policy": "same-origin"
     },
     cors: {
-      origin: "http://localhost:3000",
+      origin: "*",
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-    },
-
+    }
   }
 });

@@ -33,7 +33,7 @@ app.post("/template", async (req: Request, res: Response) => {
                 content: prompt
             }
         ],
-        model: 'qwen-2.5-coder-32b',
+        model: 'qwen-qwq-32b',
         max_tokens: 200,
         temperature: 0
     })
@@ -71,7 +71,7 @@ app.post("/chat", async (req: Request, res: Response) => {
             },
             ...messages
         ],
-        model: 'qwen-2.5-coder-32b',
+        model: 'qwen-qwq-32b',
         max_tokens: 8000,
         temperature: 0
     })

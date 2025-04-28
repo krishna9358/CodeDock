@@ -11,9 +11,10 @@ const app = express();
 
 // Configure CORS
 app.use(cors({
-    origin: 'code-dock-1rmnbgqfb-krishna9358s-projects.vercel.app/builder', // 👈 allow only your Vercel frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    origin: ['https://code-dock-nrs5gwoaa-krishna9358s-projects.vercel.app', 'https://code-dock-iota.vercel.app/', 'http://localhost:5173', 'https://codedock.krishnamohan.tech'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    credentials: true
 }));
 
 app.use(express.json());

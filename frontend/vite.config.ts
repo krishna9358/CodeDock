@@ -9,8 +9,8 @@ export default defineConfig({
   },
   server: {
     headers: {
-      "Cross-Origin-Embedder-Policy": "cri",
-      "Cross-Origin-Opener-Policy": ""
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin"
     },
     cors: {
       origin: "*",

@@ -10,7 +10,11 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const app = express();
 
 // Configure CORS
-app.use(cors());
+app.use(cors({
+    origin: 'code-dock-1rmnbgqfb-krishna9358s-projects.vercel.app/builder', // 👈 allow only your Vercel frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+}));
 
 app.use(express.json());
 

@@ -384,7 +384,7 @@ export function Home() {
                 <polygon points="50,30 70,40 70,60 50,70 30,60 30,40" fill="rgba(78, 159, 255, 0.5)" />
               </svg>
             </div>
-            {sidebarOpen && <h2 className="text-blue-400 font-bold">CodeDock</h2>}
+            {sidebarOpen && <h2 className="text-blue-400 font-bold">Nexora</h2>}
           </div>
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}

@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home as HomeIcon, FileText, Twitter, Linkedin, Mail, ChevronLeft, ChevronRight, Command, Send } from 'lucide-react';
+import { Home as HomeIcon, FileText, Twitter, Linkedin, Mail, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 export function Home() {
   const [prompt, setPrompt] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Use wallet adapter
+  const { publicKey } = useWallet();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,20 +326,41 @@ export function Home() {
             transition: padding-left 0.3s ease;
           }
 
-          .wallet-button {
-            background: linear-gradient(90deg, rgba(0, 82, 155, 0.5), rgba(78, 159, 255, 0.5));
-            background-size: 200% auto;
-            color: white;
-            border: 1px solid rgba(78, 159, 255, 0.4);
-            border-radius: 8px;
-            padding: 0.5rem 1.25rem;
-            transition: all 0.3s ease;
+          .wallet-adapter-button {
+            background: linear-gradient(90deg, rgba(0, 82, 155, 0.5), rgba(78, 159, 255, 0.5)) !important;
+            background-size: 200% auto !important;
+            color: white !important;
+            border: 1px solid rgba(78, 159, 255, 0.4) !important;
+            border-radius: 8px !important;
+            padding: 0.5rem 1.25rem !important;
+            transition: all 0.3s ease !important;
+            font-family: inherit !important;
+            font-weight: normal !important;
           }
           
-          .wallet-button:hover {
-            background-position: right center;
-            box-shadow: 0 0 15px rgba(0, 162, 255, 0.4);
-            border-color: rgba(78, 159, 255, 0.8);
+          .wallet-adapter-button:hover {
+            background-position: right center !important;
+            box-shadow: 0 0 15px rgba(0, 162, 255, 0.4) !important;
+            border-color: rgba(78, 159, 255, 0.8) !important;
+          }
+
+          .wallet-adapter-button-trigger {
+            background: linear-gradient(90deg, rgba(0, 82, 155, 0.5), rgba(78, 159, 255, 0.5)) !important;
+          }
+
+          .wallet-adapter-dropdown-list {
+            background: rgba(1, 22, 39, 0.9) !important;
+            backdrop-filter: blur(10px) !important;
+            border: 1px solid rgba(78, 159, 255, 0.3) !important;
+          }
+
+          .wallet-adapter-dropdown-list-item {
+            color: white !important;
+            border-color: rgba(78, 159, 255, 0.2) !important;
+          }
+
+          .wallet-adapter-dropdown-list-item:hover {
+            background: rgba(78, 159, 255, 0.2) !important;
           }
         `}
       </style>
@@ -343,9 +369,7 @@ export function Home() {
       <div className="top-navbar">
         <div className="flex-1"></div>
         <div>
-          <button className="wallet-button">
-            Connect Wallet
-          </button>
+          <WalletMultiButton />
         </div>
       </div>
       
@@ -384,7 +408,7 @@ export function Home() {
       {/* Main content */}
       <div className="dark-space-bg main-content 0">
         <div className="container mx-auto max-w-6xl px-4 py-8 ">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-10 top-20 mt-20">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-10 mt-20">
             {/* Left side - content */}
             <div className="w-full md:w-2/3 z-10" style={{ animation: "slideUp 0.8s ease-out 0.2s both" }}>
               <div className="text-center md:text-left mb-12">
@@ -410,6 +434,32 @@ export function Home() {
                   <button type="submit" className="p-2 text-blue-400 hover:text-blue-300">
                     <Send className="w-5 h-5" />
                   </button>
+                </div>
+                
+                <div className="mt-6">
+                  <div className="flex flex-wrap gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setPrompt("Generate a landing page for your memecoin")}
+                      className="px-3 py-2 bg-blue-900/30 text-blue-200 text-sm rounded-md border border-blue-500/30 hover:bg-blue-800/40 hover:border-blue-400/50 transition-all"
+                    >
+                      Generate a landing page for your memecoin
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setPrompt("Build a Solana portfolio tracker using free APIs")}
+                      className="px-3 py-2 bg-blue-900/30 text-blue-200 text-sm rounded-md border border-blue-500/30 hover:bg-blue-800/40 hover:border-blue-400/50 transition-all"
+                    >
+                      Build a Solana portfolio tracker using free APIs
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setPrompt("Build a site showing crypto related news")}
+                      className="px-3 py-2 bg-blue-900/30 text-blue-200 text-sm rounded-md border border-blue-500/30 hover:bg-blue-800/40 hover:border-blue-400/50 transition-all"
+                    >
+                      Build a site showing crypto related news
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

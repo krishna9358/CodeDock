@@ -38,7 +38,7 @@ app.post("/template", async (req: Request, res: Response) => {
                 content: prompt
             }
         ],
-        model: 'qwen-qwq-32b',
+        model: 'llama3-70b-8192',
         max_tokens: 200,
         temperature: 0
     })
@@ -67,6 +67,7 @@ app.post("/template", async (req: Request, res: Response) => {
 app.post("/chat", async (req: Request, res: Response) => {
     const messages = req.body.messages;
     const systemPrompt = getSystemPrompt();
+    const updatedSystemPrompt = systemPrompt + `\n\nIMPORTANT: You are an expert in Node.js and React. You are given a list of files and a prompt. You need to write the code for the prompt. Write the correct code with proper indentation and formatting. There should be no extra text or comments. `;
     
     const response = await groq.chat.completions.create({
         messages: [
@@ -76,8 +77,8 @@ app.post("/chat", async (req: Request, res: Response) => {
             },
             ...messages
         ],
-        model: 'qwen-qwq-32b',
-        max_tokens: 8000,
+        model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
+        max_tokens: 8191,
         temperature: 0
     })
 

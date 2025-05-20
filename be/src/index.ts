@@ -11,7 +11,7 @@ const app = express();
 
 // Configure CORS
 app.use(cors({
-    origin: ['https://code-dock-nrs5gwoaa-krishna9358s-projects.vercel.app', 'https://code-dock-iota.vercel.app/','https://code-dock-iota.vercel.app/builder', 'http://localhost:5173',"https://localhost:5173/builder", 'https://codedock.krishnamohan.tech', 'https://codedock.krishnamohan.tech/builder' , 'http://codedock.dns.army' , 'https://codedock.dns.army' , 'https://codedock.dns.army/builder'],
+    origin: ['https://code-dock-nrs5gwoaa-krishna9358s-projects.vercel.app', 'https://code-dock-iota.vercel.app','https://code-dock-iota.vercel.app/builder', 'http://localhost:5173',"https://localhost:5173/builder", 'https://codedock.krishnamohan.tech', 'https://codedock.krishnamohan.tech/builder' , 'http://codedock.dns.army' , 'https://codedock.dns.army' , 'https://codedock.dns.army/builder'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true

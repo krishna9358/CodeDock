@@ -24,11 +24,14 @@ export function PreviewFrame({ files, webContainer }: PreviewFrameProps) {
     // Wait for `server-ready` event
     webContainer.on('server-ready', (port, url) => {
       // ...
-
-      console.log(url)
-      console.log(port)
+      console.log("--------------------------------")
+      console.log("--------------------------------")
+      console.log("Your server is ready to view")
+      console.log("Server ready at ", url)
+      console.log("Port : ", port)
+      console.log("--------------------------------")
+      console.log("--------------------------------")
       setUrl(url);
-      window.open(url, '_blank');
     });
   }
 

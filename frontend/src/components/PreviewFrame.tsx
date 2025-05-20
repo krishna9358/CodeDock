@@ -11,7 +11,7 @@ export function PreviewFrame({ files, webContainer }: PreviewFrameProps) {
   const [url, setUrl] = useState("");
 
   async function main() {
-    const installProcess = await webContainer.spawn('npm', ['install']);
+    const installProcess = await webContainer.spawn('pnpm', ['install']);
 
     installProcess.output.pipeTo(new WritableStream({
       write(data) {
@@ -19,7 +19,7 @@ export function PreviewFrame({ files, webContainer }: PreviewFrameProps) {
       }
     }));
 
-    await webContainer.spawn('npm', ['run', 'dev']);
+    await webContainer.spawn('pnpm', ['dev']);
 
     // Wait for `server-ready` event
     webContainer.on('server-ready', (port, url) => {

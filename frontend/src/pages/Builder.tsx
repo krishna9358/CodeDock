@@ -11,8 +11,9 @@ import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { Loader } from '../components/Loader';
-import { Code2, Eye, Menu, Plus, Terminal, Settings, RefreshCw } from 'lucide-react';
+import { Code2, Eye, Menu, Plus, Terminal as TerminalIcon, Settings, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Terminal } from '../components/Terminal';
 
 export function Builder() {
   const location = useLocation();
@@ -275,7 +276,7 @@ export function Builder() {
               terminalVisible ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'
             }`}
           >
-            <Terminal className="w-5 h-5" />
+            <TerminalIcon className="w-5 h-5" />
           </button>
           <button className="hover:bg-secondary/80 p-2 rounded-lg transition-colors">
             <Settings className="w-5 h-5 text-muted-foreground" />
@@ -342,15 +343,6 @@ export function Builder() {
                 >
                   <CodeEditor
                     file={selectedFile}
-                    onChange={(content) => {
-                      if (selectedFile) {
-                        setFiles(files.map(f => 
-                          f.path === selectedFile.path 
-                            ? { ...f, content } 
-                            : f
-                        ));
-                      }
-                    }}
                   />
                 </motion.div>
               ) : (
@@ -419,7 +411,7 @@ export function Builder() {
             exit={{ height: 0 }}
             className="border-t border-border/40 bg-background/95 backdrop-blur-xl"
           >
-            {/* Terminal component will go here */}
+            <Terminal webContainer={webcontainer || null} />
           </motion.div>
         )}
       </AnimatePresence>

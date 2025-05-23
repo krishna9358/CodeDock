@@ -76,7 +76,9 @@ app.post("/template", async (req: Request, res: Response) => {
 app.post("/chat", async (req: Request, res: Response) => {
     const messages = req.body.messages;
     const systemPrompt = getSystemPrompt();
-    const updatedSystemPrompt = systemPrompt + `\n\nIMPORTANT: You are an expert in Node.js and React. You are given a list of files and a prompt. You need to write the code for the prompt. Write the correct code with proper indentation and formatting. There should be no extra text or comments. `;
+    const updatedSystemPrompt = systemPrompt + `\n\nIMPORTANT: You are an expert in Node.js and React. You are given a list of files and a prompt. You need to write the code for the prompt. Write the correct code with proper indentation and formatting. There should be no extra text or comments.
+    - Make components that are reusable and can be used in other projects. Make it properly typed, with proper props and return types. Dont forget to export the component. If you fail to do so, you will get a penalty.
+    `;
     
     // Convert messages to Anthropic format
     // const anthropicMessages = messages.map((msg: any) => ({

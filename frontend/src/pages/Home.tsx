@@ -447,7 +447,7 @@ export function Home() {
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setPrompt("Build a Solana portfolio tracker using free APIs")}
+                      onClick={() => setPrompt("Build a Solana portfolio tracker. (Frontend with hardcoded values)")}
                       className="px-3 py-2 bg-blue-900/30 text-blue-200 text-sm rounded-md border border-blue-500/30 hover:bg-blue-800/40 hover:border-blue-400/50 transition-all"
                     >
                       Build a Solana portfolio tracker using free APIs

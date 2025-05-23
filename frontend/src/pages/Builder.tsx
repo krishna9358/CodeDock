@@ -1,6 +1,6 @@
-"use client"
+
 import { useEffect, useState } from 'react';
-import { useLocation} from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { StepsList } from '../components/StepsList';
 import { FileExplorer } from '../components/FileExplorer';
 import { CodeEditor } from '../components/CodeEditor';
@@ -13,10 +13,11 @@ import { useWebContainer } from '../hooks/useWebContainer';
 import { Loader } from '../components/Loader';
 import { Code2, Eye, Menu, Plus, Terminal as TerminalIcon, Settings, RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Terminal } from '../components/Terminal';
+// import { Terminal } from '../components/Terminal';
 
 export function Builder() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { prompt } = location.state as { prompt: string };
   const [userPrompt, setPrompt] = useState("");
   const [llmMessages, setLlmMessages] = useState<{role: "user" | "assistant", content: string;}[]>([]);
@@ -204,6 +205,12 @@ export function Builder() {
   //   );
   // }
 
+  const handleNewChat = () => {
+    if (window.confirm('Are you sure you want to start a new chat? This will clear your current progress.')) {
+      navigate('/');
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background/95 to-background/90">
       {/* Top Navigation Bar */}
@@ -220,9 +227,7 @@ export function Builder() {
             <Menu className="w-5 h-5 text-muted-foreground" />
           </button>
           <button 
-            onClick={() => {
-              // Implement new chat functionality
-            }}
+            onClick={handleNewChat}
             className="flex items-center space-x-2 px-3 py-2 hover:bg-secondary/80 rounded-lg text-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -244,9 +249,7 @@ export function Builder() {
           <button
             onClick={() => {
               setActiveTab('preview');
-              if (!isPreviewReady) {
-                // Implement preview refresh functionality
-              }
+
             }}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
               activeTab === 'preview' 
@@ -258,10 +261,7 @@ export function Builder() {
             <span>Preview</span>
             {activeTab === 'preview' && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  // Implement preview refresh functionality
-                }}
+                
                 className="ml-2 p-1 hover:bg-background/50 rounded-md"
               >
                 <RefreshCw className={`w-3 h-3 ${previewLoading ? 'animate-spin' : ''}`} />
@@ -269,7 +269,7 @@ export function Builder() {
             )}
           </button>
         </div>
-        <div className="flex items-center space-x-2">
+        {/* <div className="flex items-center space-x-2">
           <button 
             onClick={() => setTerminalVisible(!terminalVisible)}
             className={`hover:bg-secondary/80 p-2 rounded-lg transition-colors ${
@@ -281,7 +281,7 @@ export function Builder() {
           <button className="hover:bg-secondary/80 p-2 rounded-lg transition-colors">
             <Settings className="w-5 h-5 text-muted-foreground" />
           </button>
-        </div>
+        </div> */}
       </motion.div>
 
       {/* Main Content */}
@@ -403,7 +403,7 @@ export function Builder() {
       </div>
 
       {/* Terminal Panel */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {terminalVisible && (
           <motion.div
             initial={{ height: 0 }}
@@ -414,7 +414,7 @@ export function Builder() {
             <Terminal webContainer={webcontainer || null} />
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </div>
   );
 }

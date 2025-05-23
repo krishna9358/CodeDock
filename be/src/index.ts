@@ -31,7 +31,8 @@ app.post("/template", async (req: Request, res: Response) => {
     const prompt = req.body.prompt;
     
     const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        // model: "claude-sonnet-4-20250514",
+        model: "claude-3-5-haiku-20241022",
         max_tokens: 200,
         messages: [
             {
@@ -78,6 +79,12 @@ app.post("/chat", async (req: Request, res: Response) => {
     const systemPrompt = getSystemPrompt();
     const updatedSystemPrompt = systemPrompt + `\n\nIMPORTANT: You are an expert in Node.js and React. You are given a list of files and a prompt. You need to write the code for the prompt. Write the correct code with proper indentation and formatting. There should be no extra text or comments.
     - Make components that are reusable and can be used in other projects. Make it properly typed, with proper props and return types. Dont forget to export the component. If you fail to do so, you will get a penalty.
+    - Properly generate the components and create component folder for the component if needed.
+    - I am using pnpm as package manager. So use pnpm as package manager to install the dependencies. Be very careful with the dependencies especially for lucide-react.
+    - If you are using lucide-react, make sure to use the correct icon name.
+
+    FIX THE ERROR:
+    SyntaxError: The requested module '/node_modules/.pnpm/lucide-react@0.344.0_react@18.3.1/node_modules/lucide-react/dist/esm/lucide-react.js?v=16f6a547' does not provide an export named '<icon-name>' 
     `;
     
     // Convert messages to Anthropic format
@@ -87,7 +94,11 @@ app.post("/chat", async (req: Request, res: Response) => {
     // }));
 
     const response = await anthropic.messages.create({
-        model: "claude-3-5-haiku-20241022",
+        // model: "claude-3-5-haiku-20241022",
+        // model : "claude-3-7-sonnet-20250219",
+        // model: "claude-sonnet-4-20250514",
+        model : "claude-3-5-sonnet-20241022",
+
         max_tokens: 8191,
         system: updatedSystemPrompt,
         messages: messages

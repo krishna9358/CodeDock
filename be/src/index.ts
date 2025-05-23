@@ -87,6 +87,7 @@ app.post("/chat", async (req: Request, res: Response) => {
     SyntaxError: The requested module '/node_modules/.pnpm/lucide-react@0.344.0_react@18.3.1/node_modules/lucide-react/dist/esm/lucide-react.js?v=16f6a547' does not provide an export named '<icon-name>' 
     `;
     
+    
     // Convert messages to Anthropic format
     // const anthropicMessages = messages.map((msg: any) => ({
     //     role: msg.role === 'assistant' ? 'user' : msg.role,

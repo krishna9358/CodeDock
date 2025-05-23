@@ -208,6 +208,8 @@ export function Builder() {
   const handleNewChat = () => {
     if (window.confirm('Are you sure you want to start a new chat? This will clear your current progress.')) {
       navigate('/');
+      window.location.reload();
+    sessionStorage.clear();
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileItem } from '../types';
 import { ChevronRight, ChevronDown, File, Folder, FileCode, FileJson, FileType, FileText, Search } from 'lucide-react';
 
@@ -11,6 +11,25 @@ interface FileExplorerProps {
 export function FileExplorer({ files, selectedFile, onFileSelect }: FileExplorerProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Auto-expand folders and select files when they're generated
+  useEffect(() => {
+    const expandPath = (path: string) => {
+      const parts = path.split('/');
+      let currentPath = '';
+      
+      // Expand all parent folders
+      for (let i = 0; i < parts.length - 1; i++) {
+        currentPath += (i === 0 ? '' : '/') + parts[i];
+        setExpandedFolders(prev => new Set([...prev, currentPath]));
+      }
+    };
+
+    // If there's a selected file, ensure its path is expanded
+    if (selectedFile) {
+      expandPath(selectedFile.path);
+    }
+  }, [selectedFile]);
 
   const toggleFolder = (path: string) => {
     const newExpanded = new Set(expandedFolders);

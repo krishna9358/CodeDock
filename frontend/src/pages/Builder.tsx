@@ -10,7 +10,7 @@ import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { Loader } from '../components/Loader';
-import { Code2, Eye, Menu, Plus, Terminal as TerminalIcon, Settings, RefreshCw } from 'lucide-react';
+import { Code2, Eye, Menu, Plus, Terminal as  RefreshCw } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 // import { Terminal } from '../components/Terminal';
 
@@ -18,7 +18,6 @@ export function Builder() {
   const location = useLocation();
   const navigate = useNavigate();
   const { prompt } = location.state as { prompt: string };
-  const [userPrompt, setPrompt] = useState("");
   const [llmMessages, setLlmMessages] = useState<{role: "user" | "assistant", content: string;}[]>([]);
   const [loading, setLoading] = useState(false);
   const [templateSet, setTemplateSet] = useState(false);
@@ -33,17 +32,23 @@ export function Builder() {
   const [files, setFiles] = useState<FileItem[]>([]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [terminalVisible, setTerminalVisible] = useState(false);
+
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [isPreviewReady, setIsPreviewReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     let originalFiles = [...files];
     let updateHappened = false;
+    let lastGeneratedFile: FileItem | null = null;
+    let appFile: FileItem | null = null;
+    let totalContentLength = 0;
+
     steps.filter(({status}) => status === "pending").map(step => {
       updateHappened = true;
       if (step?.type === StepType.CreateFile) {
+        // Add content length to total
+        totalContentLength += step.code?.length || 0;
+
         let parsedPath = step.path?.split("/") ?? []; // ["src", "components", "App.tsx"]
         let currentFileStructure = [...originalFiles]; // {}
         let finalAnswerRef = currentFileStructure;
@@ -58,14 +63,27 @@ export function Builder() {
             // final file
             let file = currentFileStructure.find(x => x.path === currentFolder)
             if (!file) {
-              currentFileStructure.push({
+              const newFile = {
                 name: currentFolderName,
-                type: 'file',
+                type: 'file' as const,
                 path: currentFolder,
                 content: step.code
-              })
+              };
+              currentFileStructure.push(newFile);
+              lastGeneratedFile = newFile;
+              
+              // Check if this is App.tsx
+              if (currentFolderName === 'App.tsx') {
+                appFile = newFile;
+              }
             } else {
               file.content = step.code;
+              lastGeneratedFile = file;
+              
+              // Check if this is App.tsx
+              if (currentFolderName === 'App.tsx') {
+                appFile = file;
+              }
             }
           } else {
             /// in a folder
@@ -85,21 +103,35 @@ export function Builder() {
         }
         originalFiles = finalAnswerRef;
       }
-
     })
 
     if (updateHappened) {
-
-      setFiles(originalFiles)
+      setFiles(originalFiles);
+      // First select App.tsx if it exists, otherwise select the last generated file
+      if (appFile) {
+        setSelectedFile(appFile);
+      } else if (lastGeneratedFile) {
+        setSelectedFile(lastGeneratedFile);
+      }
       setSteps(steps => steps.map((s: Step) => {
         return {
           ...s,
           status: "completed"
         }
-        
       }))
+
+      // Calculate delay based on content length (5ms per character, minimum 20s, maximum 30s)
+      const baseDelay = Math.min(Math.max(totalContentLength * 5, 40000), 50000);
+      
+      // Add a small random delay (0-2s) to make it feel more natural
+      const randomDelay = Math.random() * 5000;
+      const finalDelay = baseDelay + randomDelay;
+
+      // Switch to preview tab after the calculated delay
+      setTimeout(() => {
+        setActiveTab('preview');
+      }, finalDelay);
     }
-    console.log(files);
   }, [steps, files]);
 
   useEffect(() => {

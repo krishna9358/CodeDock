@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StepsList } from '../components/StepsList';

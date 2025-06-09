@@ -82,10 +82,10 @@ app.post("/chat", async (req: Request, res: Response) => {
     - Properly generate the components and create component folder for the component if needed.
     - I am using pnpm as package manager. So use pnpm as package manager to install the dependencies. Be very careful with the dependencies especially for lucide-react.
     - If you are using lucide-react, make sure to use the correct icon name.
-
+    
     FIX THE ERROR:
     SyntaxError: The requested module '/node_modules/.pnpm/lucide-react@0.344.0_react@18.3.1/node_modules/lucide-react/dist/esm/lucide-react.js?v=16f6a547' does not provide an export named '<icon-name>' 
-    `;
+    `
     
     
     // Convert messages to Anthropic format
@@ -122,4 +122,3 @@ app.post("/chat", async (req: Request, res: Response) => {
 })
 
 app.listen(3000);
-

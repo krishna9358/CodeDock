@@ -13,10 +13,22 @@ export function PreviewFrame({ webContainer }: PreviewFrameProps) {
   const [loadingMessage, setLoadingMessage] = useState('Initializing preview...');
   const [isLoading, setIsLoading] = useState(true);
 
-  async function main() {
+  useEffect(() => {
     if (!webContainer) return;
-    
-    setIsLoading(true);
+
+    // Listen for server ready event
+    webContainer.on('server-ready', (port, url) => {
+      setUrl(url);
+      setIsLoading(false);
+      setLoadingProgress(100);
+      console.log('--------------------------------');
+      console.log('🎉 Server is ready!');
+      console.log('🌐 URL:', url);
+      console.log('🔌 Port:', port);
+      console.log('--------------------------------');
+    });
+
+    // Start progress animation
     const messages = [
       'Initializing preview...',
       'Installing dependencies...',
@@ -41,39 +53,9 @@ export function PreviewFrame({ webContainer }: PreviewFrameProps) {
       }
     }, 50);
 
-    try {
-      const installProcess = await webContainer.spawn('pnpm', ['install']);
-      await installProcess.exit;
-
-      const devProcess = await webContainer.spawn('pnpm', ['dev']);
-      devProcess.output.pipeTo(new WritableStream({
-        write(data) {
-          console.log(data);
-        }
-      }));
-      // Wait for `server-ready` event
-      webContainer.on('server-ready', (port, url) => {
-        setUrl(url);
-        setIsLoading(false);
-        clearInterval(progressInterval);
-        setLoadingProgress(100);
-        console.log("--------------------------------")
-        console.log("--------------------------------")
-        console.log("Your server is ready to view")
-        console.log("Server ready at ", url)
-        console.log("Port : ", port)
-        console.log("--------------------------------")
-        console.log("--------------------------------")
-      });
-    } catch (error) {
-      console.error('Preview initialization failed:', error);
-      setIsLoading(false);
+    return () => {
       clearInterval(progressInterval);
-    }
-  }
-
-  useEffect(() => {
-    main();
+    };
   }, [webContainer]);
 
   if (isLoading) {

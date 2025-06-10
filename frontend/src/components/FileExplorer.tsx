@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { FileItem } from '../types';
 import { ChevronRight, ChevronDown, File, Folder, FileCode, FileJson, FileType, FileText, Search } from 'lucide-react';
 

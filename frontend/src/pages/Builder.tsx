@@ -35,6 +35,7 @@ export function Builder() {
 
   const [previewLoading, setPreviewLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
 
   useEffect(() => {
     let originalFiles = [...files];
@@ -120,10 +121,16 @@ export function Builder() {
         }
       }))
 
-      // Calculate delay based on content length (5ms per character, minimum 20s, maximum 30s)
+      // Start installation process immediately
+      if (webcontainer && !isInstalling) {
+        setIsInstalling(true);
+        startInstallation();
+      }
+
+      // Calculate delay based on content length (5ms per character, minimum 40s, maximum 50s)
       const baseDelay = Math.min(Math.max(totalContentLength * 5, 40000), 50000);
       
-      // Add a small random delay (0-2s) to make it feel more natural
+      // Add a small random delay (0-5s) to make it feel more natural
       const randomDelay = Math.random() * 5000;
       const finalDelay = baseDelay + randomDelay;
 
@@ -132,7 +139,50 @@ export function Builder() {
         setActiveTab('preview');
       }, finalDelay);
     }
-  }, [steps, files]);
+  }, [steps, files, webcontainer, isInstalling]);
+
+  // Function to start the installation process
+  const startInstallation = async () => {
+    if (!webcontainer) return;
+
+    try {
+      console.log('Starting dependency installation...');
+      const installProcess = await webcontainer.spawn('pnpm', ['install']);
+      
+      // Pipe installation output to console
+      installProcess.output.pipeTo(new WritableStream({
+        write(data) {
+          console.log('📦 Installing:', data);
+        }
+      }));
+
+      // Wait for installation to complete
+      const installExitCode = await installProcess.exit;
+      console.log('✅ Dependencies installed with exit code:', installExitCode);
+
+      // Start the dev server after installation
+      console.log('Starting development server...');
+      const devProcess = await webcontainer.spawn('pnpm', ['dev']);
+      
+      // Pipe dev server output to console
+      devProcess.output.pipeTo(new WritableStream({
+        write(data) {
+          console.log('🚀 Dev Server:', data);
+        }
+      }));
+
+      // Listen for server ready event
+      webcontainer.on('server-ready', (port, url) => {
+        console.log('--------------------------------');
+        console.log('🎉 Server is ready!');
+        console.log('🌐 URL:', url);
+        console.log('🔌 Port:', port);
+        console.log('--------------------------------');
+      });
+    } catch (error) {
+      console.error('❌ Installation failed:', error);
+    }
+  };
 
   useEffect(() => {
     const createMountStructure = (files: FileItem[]): Record<string, any> => {

@@ -1,4 +1,3 @@
-
 import { Step } from '../types';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -6,7 +5,7 @@ import { motion } from 'framer-motion';
 interface StepsListProps {
   steps: Step[];
   currentStep: number;
-  onStepClick: (step: number) => void;
+  onStepClick?: (step: number) => void;
 }
 
 export function StepsList({ steps, currentStep, onStepClick }: StepsListProps) {
@@ -27,7 +26,7 @@ export function StepsList({ steps, currentStep, onStepClick }: StepsListProps) {
               className={`relative ${isActive ? 'z-10' : 'z-0'}`}
             >
               <button
-                onClick={() => onStepClick(step.id)}
+                onClick={() => onStepClick?.(step.id)}
                 className={`w-full text-left group transition-all duration-200 ${
                   isActive
                     ? 'scale-100'

@@ -1,50 +1,54 @@
-import Editor from '@monaco-editor/react';
 import { FileItem } from '../types';
-import { useEffect, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import Editor from '@monaco-editor/react';
 
 interface CodeEditorProps {
-  file: FileItem | null;
+  file: FileItem;
+  onChange?: (content: string) => void;
+  onAnimationComplete?: () => void;
 }
 
-export function CodeEditor({ file }: CodeEditorProps) {
+export function CodeEditor({ file, onChange, onAnimationComplete }: CodeEditorProps) {
   const [displayedContent, setDisplayedContent] = useState('');
   const [isAnimating, setIsAnimating] = useState(false);
+  const animationRef = useRef<NodeJS.Timeout | null>(null);
+  const contentRef = useRef<string>('');
 
   useEffect(() => {
-    if (!file?.content) {
-      setDisplayedContent('');
-      return;
+    // Clear any existing animation
+    if (animationRef.current) {
+      clearTimeout(animationRef.current);
     }
 
-    setIsAnimating(true);
-    let currentIndex = 0;
-    const content = file.content;
-    const typingSpeed = 10; // milliseconds per character
+    if (file) {
+      setIsAnimating(true);
+      contentRef.current = '';
+      const content = file.content || 'No content available';
+      let currentIndex = 0;
+      
+      const typeText = () => {
+        if (currentIndex < content.length) {
+          contentRef.current = content.slice(0, currentIndex + 1);
+          setDisplayedContent(contentRef.current);
+          currentIndex++;
+          animationRef.current = setTimeout(typeText, 10);
+        } else {
+          setIsAnimating(false);
+          onAnimationComplete?.();
+        }
+      };
+      
+      // Start typing animation
+      typeText();
+    }
 
-    const typeNextChar = () => {
-      if (currentIndex < content.length) {
-        setDisplayedContent(content.slice(0, currentIndex + 1));
-        currentIndex++;
-        setTimeout(typeNextChar, typingSpeed);
-      } else {
-        setIsAnimating(false);
+    // Cleanup function
+    return () => {
+      if (animationRef.current) {
+        clearTimeout(animationRef.current);
       }
     };
-
-    typeNextChar();
-
-    return () => {
-      setIsAnimating(false);
-    };
-  }, [file?.content]);
-
-  if (!file) {
-    return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        Select a file to view its contents
-      </div>
-    );
-  }
+  }, [file, onAnimationComplete]);
 
   return (
     <div className="relative h-full">

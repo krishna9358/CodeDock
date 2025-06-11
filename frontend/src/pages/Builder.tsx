@@ -10,8 +10,10 @@ import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { Loader } from '../components/Loader';
-import { Code2, Eye, Menu, Plus, Terminal as  RefreshCw } from 'lucide-react';
+import { Code2, Eye, Menu, Plus, Terminal as RefreshCw, MessageSquare, FolderOpen } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { InteractiveLoader } from '../components/InteractiveLoader';
+import { FollowUpMessage } from '../components/FollowUpMessage';
 // import { Terminal } from '../components/Terminal';
 
 export function Builder() {
@@ -37,21 +39,30 @@ export function Builder() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
+  const [showInteractiveLoader, setShowInteractiveLoader] = useState(true);
+  const [showFollowUp, setShowFollowUp] = useState(false);
+  const [processedFiles, setProcessedFiles] = useState<FileItem[]>([]);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const [sidebarTab, setSidebarTab] = useState<'files' | 'chat'>('files');
+  const [isFileAnimationComplete, setIsFileAnimationComplete] = useState(false);
+  const [isFileAnimationInProgress, setIsFileAnimationInProgress] = useState(false);
+  const [hasReceivedFiles, setHasReceivedFiles] = useState(false);
+
   useEffect(() => {
     let originalFiles = [...files];
     let updateHappened = false;
     let lastGeneratedFile: FileItem | null = null;
     let appFile: FileItem | null = null;
     let totalContentLength = 0;
+    let newFiles: FileItem[] = [];
 
     steps.filter(({status}) => status === "pending").map(step => {
       updateHappened = true;
       if (step?.type === StepType.CreateFile) {
-        // Add content length to total
         totalContentLength += step.code?.length || 0;
 
-        let parsedPath = step.path?.split("/") ?? []; // ["src", "components", "App.tsx"]
-        let currentFileStructure = [...originalFiles]; // {}
+        let parsedPath = step.path?.split("/") ?? [];
+        let currentFileStructure = [...originalFiles];
         let finalAnswerRef = currentFileStructure;
   
         let currentFolder = ""
@@ -61,7 +72,6 @@ export function Builder() {
           parsedPath = parsedPath.slice(1);
   
           if (!parsedPath.length) {
-            // final file
             let file = currentFileStructure.find(x => x.path === currentFolder)
             if (!file) {
               const newFile = {
@@ -72,25 +82,23 @@ export function Builder() {
               };
               currentFileStructure.push(newFile);
               lastGeneratedFile = newFile;
+              newFiles.push(newFile);
               
-              // Check if this is App.tsx
               if (currentFolderName === 'App.tsx') {
                 appFile = newFile;
               }
             } else {
               file.content = step.code;
               lastGeneratedFile = file;
+              newFiles.push(file);
               
-              // Check if this is App.tsx
               if (currentFolderName === 'App.tsx') {
                 appFile = file;
               }
             }
           } else {
-            /// in a folder
             let folder = currentFileStructure.find(x => x.path === currentFolder)
             if (!folder) {
-              // create the folder
               currentFileStructure.push({
                 name: currentFolderName,
                 type: 'folder',
@@ -108,79 +116,92 @@ export function Builder() {
 
     if (updateHappened) {
       setFiles(originalFiles);
-      // First select App.tsx if it exists, otherwise select the last generated file
+      setProcessedFiles(newFiles);
+      setHasReceivedFiles(true);
+      
       if (appFile) {
         setSelectedFile(appFile);
       } else if (lastGeneratedFile) {
         setSelectedFile(lastGeneratedFile);
       }
-      setSteps(steps => steps.map((s: Step) => {
-        return {
-          ...s,
-          status: "completed"
-        }
-      }))
+      
+      setSteps(steps => steps.map((s: Step) => ({
+        ...s,
+        status: "completed"
+      })));
 
-      // Start installation process immediately
       if (webcontainer && !isInstalling) {
         setIsInstalling(true);
         startInstallation();
       }
 
-      // Calculate delay based on content length (5ms per character, minimum 40s, maximum 50s)
       const baseDelay = Math.min(Math.max(totalContentLength * 5, 40000), 50000);
-      
-      // Add a small random delay (0-5s) to make it feel more natural
       const randomDelay = Math.random() * 5000;
       const finalDelay = baseDelay + randomDelay;
 
-      // Switch to preview tab after the calculated delay
       setTimeout(() => {
         setActiveTab('preview');
+        setShowInteractiveLoader(false);
+        setShowFollowUp(true);
       }, finalDelay);
     }
   }, [steps, files, webcontainer, isInstalling]);
 
   // Function to start the installation process
   const startInstallation = async () => {
-    if (!webcontainer) return;
+    if (!webcontainer || !hasReceivedFiles) return;
 
     try {
+      setIsInstalling(true);
       console.log('Starting dependency installation...');
-      const installProcess = await webcontainer.spawn('pnpm', ['install']);
       
-      // Pipe installation output to console
+      // Create package.json if it doesn't exist
+      const packageJson = files.find(f => f.path === '/package.json');
+      if (!packageJson) {
+        await webcontainer.fs.writeFile('/package.json', JSON.stringify({
+          name: 'my-project',
+          type: 'module',
+          scripts: {
+            dev: 'vite'
+          }
+        }));
+      }
+
+      const installProcess = await webcontainer.spawn('pnpm', ['install']);
+      console.log('installProcess', installProcess);
       installProcess.output.pipeTo(new WritableStream({
         write(data) {
           console.log('📦 Installing:', data);
         }
       }));
 
-      // Wait for installation to complete
+
+
       const installExitCode = await installProcess.exit;
       console.log('✅ Dependencies installed with exit code:', installExitCode);
 
-      // Start the dev server after installation
-      console.log('Starting development server...');
-      const devProcess = await webcontainer.spawn('pnpm', ['dev']);
-      
-      // Pipe dev server output to console
-      devProcess.output.pipeTo(new WritableStream({
-        write(data) {
-          console.log('🚀 Dev Server:', data);
-        }
-      }));
+      if (installExitCode === 0) {
+        console.log('Starting development server...');
+        const devProcess = await webcontainer.spawn('pnpm', ['dev']);
+        
+        devProcess.output.pipeTo(new WritableStream({
+          write(data) {
+            console.log('🚀 Dev Server:', data);
+          }
+        }));
 
-      // Listen for server ready event
-      webcontainer.on('server-ready', (port, url) => {
-        console.log('--------------------------------');
-        console.log('🎉 Server is ready!');
-        console.log('🌐 URL:', url);
-        console.log('🔌 Port:', port);
-        console.log('--------------------------------');
-      });
+        webcontainer.on('server-ready', (port, url) => {
+          console.log('--------------------------------');
+          console.log('🎉 Server is ready!');
+          console.log('🌐 URL:', url);
+          console.log('🔌 Port:', port);
+          console.log('--------------------------------');
+        });
+      }
     } catch (error) {
       console.error('❌ Installation failed:', error);
+    } finally {
+      setIsInstalling(false);
     }
   };
 
@@ -294,16 +315,62 @@ export function Builder() {
     }
   };
 
+  // Function to process files one by one with slower animation
+  useEffect(() => {
+    if (processedFiles.length > 0 && currentFileIndex < processedFiles.length) {
+      const timer = setTimeout(() => {
+        setSelectedFile(processedFiles[currentFileIndex]);
+        setCurrentFileIndex(prev => prev + 1);
+      }, 3000); // Show each file for 3 seconds
+
+      return () => clearTimeout(timer);
+    } else if (currentFileIndex >= processedFiles.length) {
+      setIsFileAnimationComplete(true);
+    }
+  }, [processedFiles, currentFileIndex]);
+
+  // Function to handle follow-up messages
+  const handleFollowUpMessage = async (message: string) => {
+    try {
+      const response = await axios.post(`${BACKEND_URL}/chat`, {
+        messages: [...llmMessages, { role: "user", content: message }]
+      });
+      
+      setLlmMessages(prev => [...prev, 
+        { role: "user", content: message },
+        { role: "assistant", content: response.data }
+      ]);
+    } catch (error) {
+      console.error('Error sending follow-up message:', error);
+    }
+  };
+
+  // Function to handle file animation completion
+  const handleFileAnimationComplete = () => {
+    setIsFileAnimationInProgress(false);
+    if (currentFileIndex < processedFiles.length - 1) {
+      setCurrentFileIndex(prev => prev + 1);
+    }
+  };
+
+  // Effect to handle file switching
+  useEffect(() => {
+    if (processedFiles.length > 0 && !isFileAnimationInProgress && currentFileIndex < processedFiles.length) {
+      setSelectedFile(processedFiles[currentFileIndex]);
+      setIsFileAnimationInProgress(true);
+    }
+  }, [processedFiles, currentFileIndex, isFileAnimationInProgress]);
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background/95 to-background/90">
       {/* Top Navigation Bar */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="h-14 border-b border-border/40 backdrop-blur-xl bg-background/30 flex items-center px-4 justify-between sticky top-0 z-50"
       >
         <div className="flex items-center space-x-4">
-          <button 
+          <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="hover:bg-secondary/80 p-2 rounded-lg transition-colors"
           >
@@ -330,10 +397,7 @@ export function Builder() {
             <span>Code</span>
           </button>
           <button
-            onClick={() => {
-              setActiveTab('preview');
-
-            }}
+            onClick={() => setActiveTab('preview')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
               activeTab === 'preview' 
                 ? 'bg-secondary text-secondary-foreground shadow-lg' 
@@ -342,34 +406,13 @@ export function Builder() {
           >
             <Eye className="w-4 h-4" />
             <span>Preview</span>
-            {activeTab === 'preview' && (
-              <button
-                
-                className="ml-2 p-1 hover:bg-background/50 rounded-md"
-              >
-                <RefreshCw className={`w-3 h-3 ${previewLoading ? 'animate-spin' : ''}`} />
-              </button>
-            )}
           </button>
         </div>
-        {/* <div className="flex items-center space-x-2">
-          <button 
-            onClick={() => setTerminalVisible(!terminalVisible)}
-            className={`hover:bg-secondary/80 p-2 rounded-lg transition-colors ${
-              terminalVisible ? 'bg-secondary text-secondary-foreground' : 'text-muted-foreground'
-            }`}
-          >
-            <TerminalIcon className="w-5 h-5" />
-          </button>
-          <button className="hover:bg-secondary/80 p-2 rounded-lg transition-colors">
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </button>
-        </div> */}
       </motion.div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Explorer */}
+        {/* Left Sidebar */}
         <AnimatePresence>
           {!sidebarCollapsed && (
             <motion.div
@@ -381,11 +424,67 @@ export function Builder() {
             >
               <div className="flex-1 overflow-hidden">
                 <div className="p-4">
-                  <FileExplorer
-                    files={files}
-                    selectedFile={selectedFile}
-                    onFileSelect={setSelectedFile}
-                  />
+                  {/* Sidebar Tabs */}
+                  <div className="flex border-b border-border/40 mb-4">
+                    <button
+                      onClick={() => setSidebarTab('files')}
+                      className={`flex-1 py-2 px-4 flex items-center justify-center space-x-2 text-sm ${
+                        sidebarTab === 'files' 
+                          ? 'border-b-2 border-primary text-primary' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <FolderOpen className="w-4 h-4" />
+                      <span>Files</span>
+                    </button>
+                    <button
+                      onClick={() => setSidebarTab('chat')}
+                      className={`flex-1 py-2 px-4 flex items-center justify-center space-x-2 text-sm ${
+                        sidebarTab === 'chat' 
+                          ? 'border-b-2 border-primary text-primary' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Chat</span>
+                    </button>
+                  </div>
+
+                  {/* Tab Content */}
+                  <AnimatePresence mode="wait">
+                    {sidebarTab === 'files' ? (
+                      <motion.div
+                        key="files"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                      >
+                        <FileExplorer
+                          files={files}
+                          selectedFile={selectedFile}
+                          onFileSelect={setSelectedFile}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="chat"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        className="h-[calc(100vh-12rem)]"
+                      >
+                        <FollowUpMessage
+                          onSendMessage={handleFollowUpMessage}
+                          initialMessages={llmMessages.map(msg => ({
+                            id: Date.now().toString(),
+                            content: msg.content,
+                            type: msg.role === 'user' ? 'user' : 'bot',
+                            timestamp: new Date()
+                          }))}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </div>
             </motion.div>
@@ -424,9 +523,19 @@ export function Builder() {
                   exit={{ opacity: 0 }}
                   className="h-full rounded-lg overflow-hidden border border-border/40 shadow-2xl"
                 >
-                  <CodeEditor
-                    file={selectedFile}
-                  />
+                  {selectedFile && (
+                    <CodeEditor
+                      file={selectedFile}
+                      onChange={(content) => {
+                        setFiles(files.map(f =>
+                          f.path === selectedFile.path
+                            ? { ...f, content }
+                            : f
+                        ));
+                      }}
+                      onAnimationComplete={handleFileAnimationComplete}
+                    />
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -436,13 +545,12 @@ export function Builder() {
                   exit={{ opacity: 0 }}
                   className="h-full rounded-lg overflow-hidden border border-border/40 shadow-2xl bg-white"
                 >
-                  {previewLoading ? (
-                    <div className="h-full flex items-center justify-center bg-background/95">
-                      <div className="text-center space-y-4">
-                        <Loader />
-                        <p className="text-sm text-muted-foreground">Loading preview...</p>
-                      </div>
-                    </div>
+                  {showInteractiveLoader ? (
+                    <InteractiveLoader
+                      onComplete={() => setShowInteractiveLoader(false)}
+                      files={processedFiles}
+                      onInstallDependencies={startInstallation}
+                    />
                   ) : (
                     <PreviewFrame webContainer={webcontainer || null} />
                   )}
@@ -476,7 +584,6 @@ export function Builder() {
                   <StepsList 
                     steps={steps} 
                     currentStep={currentStep}
-                    onStepClick={setCurrentStep}
                   />
                 </div>
               </div>
@@ -484,20 +591,6 @@ export function Builder() {
           )}
         </AnimatePresence>
       </div>
-
-      {/* Terminal Panel */}
-      {/* <AnimatePresence>
-        {terminalVisible && (
-          <motion.div
-            initial={{ height: 0 }}
-            animate={{ height: 300 }}
-            exit={{ height: 0 }}
-            className="border-t border-border/40 bg-background/95 backdrop-blur-xl"
-          >
-            <Terminal webContainer={webcontainer || null} />
-          </motion.div>
-        )}
-      </AnimatePresence> */}
     </div>
   );
 }

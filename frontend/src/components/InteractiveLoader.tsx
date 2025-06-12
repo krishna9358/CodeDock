@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader } from './Loader';
-import { Terminal } from './Terminal';
+// import { Loader } from './Loader';
+// import { Terminal } from './Terminal';
 import { FileText, Package, Cog, Rocket, Palette, Smartphone, Wrench, Sparkles } from 'lucide-react';
 
 interface InteractiveLoaderProps {

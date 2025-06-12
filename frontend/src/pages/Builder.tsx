@@ -141,7 +141,7 @@ export function Builder() {
 
       setTimeout(() => {
         setActiveTab('preview');
-        setShowInteractiveLoader(false);
+        setShowInteractiveLoader(true);
         setShowFollowUp(true);
       }, finalDelay);
     }
@@ -152,7 +152,7 @@ export function Builder() {
     if (!webcontainer || !hasReceivedFiles) return;
 
     try {
-      setIsInstalling(true);
+      setIsInstalling(false);
       console.log('Starting dependency installation...');
       
       // Create package.json if it doesn't exist

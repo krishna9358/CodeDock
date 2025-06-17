@@ -13,6 +13,7 @@ export function CodeEditor({ file, onChange, onAnimationComplete }: CodeEditorPr
   const [isAnimating, setIsAnimating] = useState(false);
   const animationRef = useRef<NodeJS.Timeout | null>(null);
   const contentRef = useRef<string>('');
+  const viewedFilesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     // Clear any existing animation
@@ -21,9 +22,18 @@ export function CodeEditor({ file, onChange, onAnimationComplete }: CodeEditorPr
     }
 
     if (file) {
+      const content = file.content || 'No content available';
+      
+      // If file was already viewed, show content immediately
+      if (viewedFilesRef.current.has(file.path)) {
+        setDisplayedContent(content);
+        setIsAnimating(false);
+        return;
+      }
+
+      // For new files, show animation
       setIsAnimating(true);
       contentRef.current = '';
-      const content = file.content || 'No content available';
       let currentIndex = 0;
       
       const typeText = () => {
@@ -34,6 +44,7 @@ export function CodeEditor({ file, onChange, onAnimationComplete }: CodeEditorPr
           animationRef.current = setTimeout(typeText, 10);
         } else {
           setIsAnimating(false);
+          viewedFilesRef.current.add(file.path);
           onAnimationComplete?.();
         }
       };

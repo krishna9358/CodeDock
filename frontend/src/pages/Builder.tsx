@@ -362,7 +362,7 @@ export function Builder() {
   }, [processedFiles, currentFileIndex, isFileAnimationInProgress]);
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-background via-background/95 to-background/90">
+    <div className="h-screen flex flex-col bg-black text-white">
       {/* Top Navigation Bar */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

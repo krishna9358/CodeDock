@@ -182,7 +182,7 @@ export function Home() {
       
       {/* Navbar */}
       <div className="top-navbar">
-        <div className="flex-1">
+        <div className="flex-1 text-white">
           Naxora 🚀
         </div>
         <div>
@@ -250,7 +250,7 @@ export function Home() {
                   />
                   <button 
                     type="submit" 
-                    className="absolute bottom-8 right-8 p-1 text-white hover:text-white bg-gray-100 rounded-full border border-blue-500/30 hover:bg-gray-700/60 hover:border-blue-400/50 transition-all flex items-center gap-2 opacity-100 "
+                    className="absolute bottom-6 right-6 p-1 text-white hover:text-white bg-gray-100 rounded-full border border-blue-500/30 hover:bg-gray-700/60 hover:border-blue-400/50 transition-all flex items-center gap-2 opacity-100 "
                   >
                     {/* <span className="text-sm font-medium">Send</span> */}
                     {/* <Send className="w-4 h-4" /> */}

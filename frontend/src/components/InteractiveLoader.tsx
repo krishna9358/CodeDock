@@ -8,6 +8,7 @@ interface InteractiveLoaderProps {
   onComplete: () => void;
   files: any[];
   onInstallDependencies: () => Promise<void>;
+  shouldStartInstallation?: boolean;
 }
 
 const BULLETIN_ICONS = {
@@ -21,7 +22,7 @@ const BULLETIN_ICONS = {
   "✨": Sparkles,
 };
 
-export function InteractiveLoader({ onComplete, files, onInstallDependencies }: InteractiveLoaderProps) {
+export function InteractiveLoader({ onComplete, files, onInstallDependencies, shouldStartInstallation = false }: InteractiveLoaderProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isInstalling, setIsInstalling] = useState(false);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
@@ -73,11 +74,11 @@ export function InteractiveLoader({ onComplete, files, onInstallDependencies }: 
       setIsInstalling(false);
     };
 
-    // Start installation only when all files are received
-    if (files.length > 0) {
+    // Start installation only when explicitly requested
+    if (shouldStartInstallation && files.length > 0) {
       startInstallation();
     }
-  }, [files, onInstallDependencies]);
+  }, [shouldStartInstallation, files, onInstallDependencies]);
 
   const getIconComponent = (bulletin: string) => {
     const emoji = bulletin.split(' ')[0];

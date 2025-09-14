@@ -38,6 +38,7 @@ export function Builder() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [hasStartedInstallation, setHasStartedInstallation] = useState(false);
 
   const [showInteractiveLoader, setShowInteractiveLoader] = useState(true);
   const [showFollowUp, setShowFollowUp] = useState(false);
@@ -130,11 +131,6 @@ export function Builder() {
         status: "completed"
       })));
 
-      if (webcontainer && !isInstalling) {
-        setIsInstalling(true);
-        startInstallation();
-      }
-
       const baseDelay = Math.min(Math.max(totalContentLength * 5, 40000), 50000);
       const randomDelay = Math.random() * 5000;
       const finalDelay = baseDelay + randomDelay;
@@ -149,7 +145,7 @@ export function Builder() {
 
   // Function to start the installation process
   const startInstallation = async () => {
-    if (!webcontainer || !hasReceivedFiles) return;
+    if (!webcontainer) return;
 
     try {
       setIsInstalling(false);
@@ -397,7 +393,15 @@ export function Builder() {
             <span>Code</span>
           </button>
           <button
-            onClick={() => setActiveTab('preview')}
+            onClick={() => {
+              setActiveTab('preview');
+              // Start installation when preview is clicked and files are ready
+              if (hasReceivedFiles && webcontainer && !hasStartedInstallation) {
+                setHasStartedInstallation(true);
+                setIsInstalling(true);
+                startInstallation();
+              }
+            }}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
               activeTab === 'preview' 
                 ? 'bg-secondary text-secondary-foreground shadow-lg' 
@@ -550,6 +554,7 @@ export function Builder() {
                       onComplete={() => setShowInteractiveLoader(false)}
                       files={processedFiles}
                       onInstallDependencies={startInstallation}
+                      shouldStartInstallation={hasStartedInstallation}
                     />
                   ) : (
                     <PreviewFrame webContainer={webcontainer || null} />

@@ -56,7 +56,7 @@ app.post("/template", async (req: Request, res: Response) => {
                 content: prompt
             }
         ],
-        model: 'llama3-70b-8192',
+        model: 'openai/gpt-oss-120b',
         max_tokens: 200,
         temperature: 0
 

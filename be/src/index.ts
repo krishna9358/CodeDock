@@ -140,7 +140,8 @@ app.post("/chat", async (req: Request, res: Response) => {
         ],
         // model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
         // model: 'llama3-70b-8192',
-        model: 'deepseek-r1-distill-llama-70b',
+        // model: 'deepseek-r1-distill-llama-70b',
+        model:'openai/gpt-oss-120b',
         max_tokens: 8191,
         temperature: 0
     })

@@ -1,16 +1,14 @@
 import "dotenv/config";
 import express, { Request, Response } from "express";
-// import Anthropic from '@anthropic-ai/sdk';
-import Groq from "groq-sdk";
+import Anthropic from '@anthropic-ai/sdk';
 import { BASE_PROMPT, getSystemPrompt } from "./prompts";
 import {basePrompt as nodeBasePrompt} from "./defaults/node";
 import {basePrompt as reactBasePrompt} from "./defaults/react";
 import cors from "cors";
 
-// const anthropic = new Anthropic({
-//     apiKey: process.env.ANTHROPIC_API_KEY
-// });
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY
+});
 
 const app = express();
 
@@ -32,43 +30,24 @@ app.get("/health", (req: Request, res: Response) => {
 app.post("/template", async (req: Request, res: Response) => {
     const prompt = req.body.prompt;
     
-    // const response = await anthropic.messages.create({
-    //     // model: "claude-sonnet-4-20250514",
-    //     model: "claude-3-5-haiku-20241022",
-    //     max_tokens: 200,
-    //     messages: [
-    //         {
-    //             role: 'user',
-    //             content: [{type: "text",
-    //                 text: "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra\n\n" + prompt}]
-    //         }
-    //     ]
-    // });
-
-    const response = await groq.chat.completions.create({
+    const response = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        system: "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra",
         messages: [
-            {
-                role: 'system',
-                content: "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra\n\n" 
-            },
             {
                 role: 'user',
                 content: prompt
             }
-        ],
-        model: 'openai/gpt-oss-120b',
-        max_tokens: 200,
-        temperature: 0
+        ]
+    });
 
-    })
-    const answer = response.choices[0]?.message?.content?.trim().toLowerCase(); // react or node
-
-    // if (!response.content || response.content.length === 0) {
-    //     res.status(400).json({message: "Invalid response from AI model"});
-    //     return;
-    // }
-    // const content = response.content[0];
-    // const answer = content.type === 'text' ? content.text.trim().toLowerCase() : '';
+    if (!response.content || response.content.length === 0) {
+        res.status(400).json({message: "Invalid response from AI model"});
+        return;
+    }
+    const content = response.content[0];
+    const answer = content.type === 'text' ? content.text.trim().toLowerCase() : '';
 
 
     if (answer?.includes("react")) {
@@ -102,49 +81,23 @@ app.post("/chat", async (req: Request, res: Response) => {
     `
     
     
-    // Convert messages to Anthropic format
-    // const anthropicMessages = messages.map((msg: any) => ({
-    //     role: msg.role === 'assistant' ? 'user' : msg.role,
-    //     content: msg.role === 'assistant' ? updatedSystemPrompt + '\n\n' + msg.content : msg.content
-    // }));
-
-    // const response = await anthropic.messages.create({
-    //     // model: "claude-3-5-haiku-20241022",
-    //     // model : "claude-3-7-sonnet-20250219",
-    //     // model: "claude-sonnet-4-20250514",
-    //     model : "claude-3-5-sonnet-20241022",
-
-    //     max_tokens: 8191,
-    //     system: updatedSystemPrompt,
-    //     messages: messages
-    // });
-
-    // if (!response.content || response.content.length === 0) {
-    //     res.status(400).json({message: "Invalid response from AI model"});
-    //     return;
-    // }
-
-    // const content = response.content[0];
-    // const responseText = content.type === 'text' ? content.text : '';
-
-    const response = await groq.chat.completions.create({
-        messages: [
-            {
-                role: 'system',
-                content: updatedSystemPrompt
-            },
-            ...messages
-        ],
-        // model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
-        // model: 'llama3-70b-8192',
-        // model: 'deepseek-r1-distill-llama-70b',
-        model:'openai/gpt-oss-120b',
+    const response = await anthropic.messages.create({
+        model: "claude-haiku-4-5-20251001",
         max_tokens: 8191,
-        temperature: 0
-    })
+        system: updatedSystemPrompt,
+        messages: messages
+    });
+
+    if (!response.content || response.content.length === 0) {
+        res.status(400).json({message: "Invalid response from AI model"});
+        return;
+    }
+
+    const content = response.content[0];
+    const responseText = content.type === 'text' ? content.text : '';
 
     res.json({
-        response: response.choices[0]?.message?.content
+        response: responseText
     });
 })
 

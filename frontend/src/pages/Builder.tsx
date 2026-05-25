@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { StepsList } from '../components/StepsList';
 import { FileExplorer } from '../components/FileExplorer';
@@ -9,357 +9,316 @@ import axios from 'axios';
 import { BACKEND_URL } from '../config';
 import { parseXml } from '../steps';
 import { useWebContainer } from '../hooks/useWebContainer';
-import { Loader } from '../components/Loader';
-import { Code2, Eye, Menu, Plus, Terminal as RefreshCw, MessageSquare, FolderOpen } from 'lucide-react';
+import { Code2, Eye, Menu, Plus, MessageSquare, FolderOpen, AlertCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { InteractiveLoader } from '../components/InteractiveLoader';
 import { FollowUpMessage } from '../components/FollowUpMessage';
-// import { Terminal } from '../components/Terminal';
+
+type LlmMessage = { role: 'user' | 'assistant'; content: string };
+
+function createMountStructure(files: FileItem[]): Record<string, any> {
+  const root: Record<string, any> = {};
+
+  const place = (entry: FileItem, target: Record<string, any>) => {
+    if (entry.type === 'folder') {
+      target[entry.name] = { directory: {} };
+      entry.children?.forEach(child => place(child, target[entry.name].directory));
+    } else {
+      target[entry.name] = { file: { contents: entry.content ?? '' } };
+    }
+  };
+
+  files.forEach(file => place(file, root));
+  return root;
+}
+
+function findAppFile(files: FileItem[]): FileItem | null {
+  const candidates = ['App.tsx', 'App.jsx', 'app.tsx', 'main.tsx', 'index.tsx', 'index.jsx'];
+  const walk = (items: FileItem[]): FileItem | null => {
+    for (const item of items) {
+      if (item.type === 'file' && candidates.includes(item.name)) return item;
+    }
+    for (const item of items) {
+      if (item.type === 'folder' && item.children) {
+        const found = walk(item.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  return walk(files);
+}
+
+function findFirstFile(files: FileItem[]): FileItem | null {
+  for (const item of files) {
+    if (item.type === 'file') return item;
+    if (item.type === 'folder' && item.children) {
+      const found = findFirstFile(item.children);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 
 export function Builder() {
   const location = useLocation();
   const navigate = useNavigate();
   const { prompt } = location.state as { prompt: string };
-  const [llmMessages, setLlmMessages] = useState<{role: "user" | "assistant", content: string;}[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [templateSet, setTemplateSet] = useState(false);
   const webcontainer = useWebContainer();
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('code');
-  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
-  
   const [steps, setSteps] = useState<Step[]>([]);
-
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
 
+  const [llmMessages, setLlmMessages] = useState<LlmMessage[]>([]);
+
+  const [activeTab, setActiveTab] = useState<'code' | 'preview'>('code');
+  const [sidebarTab, setSidebarTab] = useState<'files' | 'chat'>('files');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false);
-  const [hasStartedInstallation, setHasStartedInstallation] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatCompleted, setChatCompleted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [showInteractiveLoader, setShowInteractiveLoader] = useState(true);
-  const [showFollowUp, setShowFollowUp] = useState(false);
-  const [processedFiles, setProcessedFiles] = useState<FileItem[]>([]);
-  const [currentFileIndex, setCurrentFileIndex] = useState(0);
-  const [sidebarTab, setSidebarTab] = useState<'files' | 'chat'>('files');
-  const [isFileAnimationComplete, setIsFileAnimationComplete] = useState(false);
-  const [isFileAnimationInProgress, setIsFileAnimationInProgress] = useState(false);
-  const [hasReceivedFiles, setHasReceivedFiles] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  const [installLog, setInstallLog] = useState<string[]>([]);
+  const [serverUrl, setServerUrl] = useState<string | null>(null);
 
+  const installStartedRef = useRef(false);
+  const initStartedRef = useRef(false);
+  const userSelectedFileRef = useRef(false);
+
+  // Process pending steps into the file tree
   useEffect(() => {
-    let originalFiles = [...files];
-    let updateHappened = false;
-    let lastGeneratedFile: FileItem | null = null;
+    const pendingSteps = steps.filter(s => s.status === 'pending');
+    if (pendingSteps.length === 0) return;
+
+    const updatedFiles = [...files];
     let appFile: FileItem | null = null;
-    let totalContentLength = 0;
-    let newFiles: FileItem[] = [];
+    let firstNewFile: FileItem | null = null;
 
-    steps.filter(({status}) => status === "pending").map(step => {
-      updateHappened = true;
-      if (step?.type === StepType.CreateFile) {
-        totalContentLength += step.code?.length || 0;
+    pendingSteps.forEach(step => {
+      if (step?.type !== StepType.CreateFile || !step.path) return;
 
-        let parsedPath = step.path?.split("/") ?? [];
-        let currentFileStructure = [...originalFiles];
-        let finalAnswerRef = currentFileStructure;
-  
-        let currentFolder = ""
-        while(parsedPath.length) {
-          currentFolder =  `${currentFolder}/${parsedPath[0]}`;
-          let currentFolderName = parsedPath[0];
-          parsedPath = parsedPath.slice(1);
-  
-          if (!parsedPath.length) {
-            let file = currentFileStructure.find(x => x.path === currentFolder)
-            if (!file) {
-              const newFile = {
-                name: currentFolderName,
-                type: 'file' as const,
-                path: currentFolder,
-                content: step.code
-              };
-              currentFileStructure.push(newFile);
-              lastGeneratedFile = newFile;
-              newFiles.push(newFile);
-              
-              if (currentFolderName === 'App.tsx') {
-                appFile = newFile;
-              }
-            } else {
-              file.content = step.code;
-              lastGeneratedFile = file;
-              newFiles.push(file);
-              
-              if (currentFolderName === 'App.tsx') {
-                appFile = file;
-              }
-            }
+      const segments = step.path.split('/').filter(Boolean);
+      let currentLevel = updatedFiles;
+      let currentPath = '';
+
+      segments.forEach((segment, idx) => {
+        currentPath = `${currentPath}/${segment}`;
+        const isLast = idx === segments.length - 1;
+
+        if (isLast) {
+          const existingIdx = currentLevel.findIndex(x => x.path === currentPath);
+          const fileEntry: FileItem = {
+            name: segment,
+            type: 'file',
+            path: currentPath,
+            content: step.code ?? '',
+          };
+          if (existingIdx === -1) {
+            currentLevel.push(fileEntry);
           } else {
-            let folder = currentFileStructure.find(x => x.path === currentFolder)
-            if (!folder) {
-              currentFileStructure.push({
-                name: currentFolderName,
-                type: 'folder',
-                path: currentFolder,
-                children: []
-              })
-            }
-  
-            currentFileStructure = currentFileStructure.find(x => x.path === currentFolder)!.children!;
+            currentLevel[existingIdx] = fileEntry;
           }
+          if (!firstNewFile) firstNewFile = fileEntry;
+          if (segment === 'App.tsx' || segment === 'App.jsx') appFile = fileEntry;
+        } else {
+          let folder = currentLevel.find(x => x.path === currentPath);
+          if (!folder) {
+            folder = { name: segment, type: 'folder', path: currentPath, children: [] };
+            currentLevel.push(folder);
+          }
+          if (!folder.children) folder.children = [];
+          currentLevel = folder.children;
         }
-        originalFiles = finalAnswerRef;
+      });
+    });
+
+    setFiles(updatedFiles);
+
+    if (chatCompleted) {
+      if (!userSelectedFileRef.current) {
+        const target = appFile || firstNewFile || findFirstFile(updatedFiles);
+        if (target) setSelectedFile(target);
+      } else if (appFile) {
+        setSelectedFile(prev => (prev && prev.path === appFile!.path ? appFile : prev));
       }
-    })
-
-    if (updateHappened) {
-      setFiles(originalFiles);
-      setProcessedFiles(newFiles);
-      setHasReceivedFiles(true);
-      
-      if (appFile) {
-        setSelectedFile(appFile);
-      } else if (lastGeneratedFile) {
-        setSelectedFile(lastGeneratedFile);
-      }
-      
-      setSteps(steps => steps.map((s: Step) => ({
-        ...s,
-        status: "completed"
-      })));
-
-      const baseDelay = Math.min(Math.max(totalContentLength * 5, 40000), 50000);
-      const randomDelay = Math.random() * 5000;
-      const finalDelay = baseDelay + randomDelay;
-
-      setTimeout(() => {
-        setActiveTab('preview');
-        setShowInteractiveLoader(true);
-        setShowFollowUp(true);
-      }, finalDelay);
     }
-  }, [steps, files, webcontainer, isInstalling]);
 
-  // Function to start the installation process
-  const startInstallation = async () => {
+    setSteps(prev => prev.map(s => (s.status === 'pending' ? { ...s, status: 'completed' } : s)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, chatCompleted]);
+
+  // Mount files to WebContainer whenever they change
+  useEffect(() => {
+    if (!webcontainer || files.length === 0) return;
+    const mountStructure = createMountStructure(files);
+    webcontainer.mount(mountStructure).catch(err => {
+      console.error('Mount failed:', err);
+    });
+  }, [files, webcontainer]);
+
+  // Listen for server-ready exactly once
+  useEffect(() => {
     if (!webcontainer) return;
+    webcontainer.on('server-ready', (_port, url) => {
+      setServerUrl(url);
+      setInstalling(false);
+      setInstallLog(prev => [...prev, '', `✅ Server ready at ${url}`]);
+      setActiveTab('preview');
+    });
+  }, [webcontainer]);
+
+  // Auto-start installation once chat is done, files are processed, and WebContainer is ready
+  useEffect(() => {
+    if (!chatCompleted || !webcontainer || installStartedRef.current) return;
+    if (files.length === 0) return;
+    installStartedRef.current = true;
+    void runInstallation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatCompleted, webcontainer, files]);
+
+  const runInstallation = async () => {
+    if (!webcontainer) return;
+    setInstalling(true);
+    setInstallLog(['$ pnpm install']);
 
     try {
-      setIsInstalling(false);
-      console.log('Starting dependency installation...');
-      
-      // Create package.json if it doesn't exist
-      const packageJson = files.find(f => f.path === '/package.json');
-      if (!packageJson) {
-        await webcontainer.fs.writeFile('/package.json', JSON.stringify({
-          name: 'my-project',
-          type: 'module',
-          scripts: {
-            dev: 'vite'
-          }
-        }));
-      }
-
       const installProcess = await webcontainer.spawn('pnpm', ['install']);
-      console.log('installProcess', installProcess);
-      installProcess.output.pipeTo(new WritableStream({
-        write(data) {
-          console.log('📦 Installing:', data);
-        }
-      }));
-
-
-
-      const installExitCode = await installProcess.exit;
-      console.log('✅ Dependencies installed with exit code:', installExitCode);
-
-      if (installExitCode === 0) {
-        console.log('Starting development server...');
-        const devProcess = await webcontainer.spawn('pnpm', ['dev']);
-        
-        devProcess.output.pipeTo(new WritableStream({
+      installProcess.output.pipeTo(
+        new WritableStream({
           write(data) {
-            console.log('🚀 Dev Server:', data);
-          }
-        }));
+            const line = data.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '').trim();
+            if (!line) return;
+            setInstallLog(prev => [...prev, line].slice(-200));
+          },
+        }),
+      );
 
-        webcontainer.on('server-ready', (port, url) => {
-          console.log('--------------------------------');
-          console.log('🎉 Server is ready!');
-          console.log('🌐 URL:', url);
-          console.log('🔌 Port:', port);
-          console.log('--------------------------------');
-        });
+      const exitCode = await installProcess.exit;
+      if (exitCode !== 0) {
+        setInstallLog(prev => [...prev, `❌ Install failed (exit ${exitCode})`]);
+        setInstalling(false);
+        return;
       }
-    } catch (error) {
-      console.error('❌ Installation failed:', error);
-    } finally {
-      setIsInstalling(false);
+
+      setInstallLog(prev => [...prev, '', '$ pnpm dev']);
+      const devProcess = await webcontainer.spawn('pnpm', ['dev']);
+      devProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            const line = data.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '').trim();
+            if (!line) return;
+            setInstallLog(prev => [...prev, line].slice(-200));
+          },
+        }),
+      );
+    } catch (e: any) {
+      console.error('Installation failed:', e);
+      setInstallLog(prev => [...prev, `❌ Error: ${e?.message || e}`]);
+      setInstalling(false);
     }
   };
 
-  useEffect(() => {
-    const createMountStructure = (files: FileItem[]): Record<string, any> => {
-      const mountStructure: Record<string, any> = {};
-  
-      const processFile = (file: FileItem, isRootFolder: boolean) => {  
-        if (file.type === 'folder') {
-          // For folders, create a directory entry
-          mountStructure[file.name] = {
-            directory: file.children ? 
-              Object.fromEntries(
-                file.children.map(child => [child.name, processFile(child, false)])
-              ) 
-              : {}
-          };
-        } else if (file.type === 'file') {
-          if (isRootFolder) {
-            mountStructure[file.name] = {
-              file: {
-                contents: file.content || ''
-              }
-            };
-          } else {
-            // For files, create a file entry with contents
-            return {
-              file: {
-                contents: file.content || ''
-              }
-            };
-          }
-        }
-  
-        return mountStructure[file.name];
-      };
-  
-      // Process each top-level file/folder
-      files.forEach(file => processFile(file, true));
-  
-      return mountStructure;
-    };
-  
-    const mountStructure = createMountStructure(files);
-  
-    // Mount the structure if WebContainer is available
-    console.log(mountStructure);
-    webcontainer?.mount(mountStructure);
-  }, [files, webcontainer]);
-
+  // Init: fetch template + chat
   async function init() {
-    const response = await axios.post(`${BACKEND_URL}/template`, {
-      prompt: prompt.trim()
-    });
-    setTemplateSet(true);
-    
-    const {prompts, uiPrompts} = response.data;
+    try {
+      const templateResp = await axios.post(`${BACKEND_URL}/template`, { prompt: prompt.trim() });
+      const { prompts, uiPrompts } = templateResp.data;
 
-    setSteps(parseXml(uiPrompts[0]).map((x: Step) => ({
-      ...x,
-      status: "pending"
-    })));
+      const templateSteps = parseXml(uiPrompts[0]).map((x: Step) => ({
+        ...x,
+        status: 'pending' as const,
+      }));
+      setSteps(templateSteps);
 
-    setLoading(true);
-    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
-      messages: [...prompts, prompt].map(content => ({
-        role: "user",
-        content
-      }))
-    })
+      setChatLoading(true);
+      const chatResp = await axios.post(`${BACKEND_URL}/chat`, {
+        messages: [...prompts, prompt].map((content: string) => ({ role: 'user', content })),
+      });
 
-    setLoading(false);
+      const responseText: string = chatResp.data?.response ?? '';
+      const chatSteps = parseXml(responseText);
 
-    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
-      ...x,
-      status: "pending" as "pending"
-    }))]);
+      setChatLoading(false);
 
-    setLlmMessages([...prompts, prompt].map(content => ({
-      role: "user",
-      content
-    })));
+      if (chatSteps.length === 0) {
+        setError(
+          'The AI response did not include any generated files. The format may have been malformed. Try a different prompt.',
+        );
+        return;
+      }
 
-    setLlmMessages(x => [...x, {role: "assistant", content: stepsResponse.data.response}])
+      setChatCompleted(true);
+      setSteps(prev => [
+        ...prev.map(s => (s.status === 'pending' ? { ...s, status: 'completed' as const } : s)),
+        ...chatSteps.map(x => ({ ...x, status: 'pending' as const })),
+      ]);
+
+      setLlmMessages([
+        ...[...prompts, prompt].map((content: string) => ({ role: 'user' as const, content })),
+        { role: 'assistant', content: responseText },
+      ]);
+    } catch (e: any) {
+      console.error('Init failed:', e);
+      setChatLoading(false);
+      setError(
+        e?.response?.data?.message || e?.message || 'Failed to generate project. Please try again.',
+      );
+    }
   }
 
   useEffect(() => {
-    init();
-  }, [])
-
-  // Show loading state while WebContainer initializes
-  // if (!webcontainer) {
-  //   return (
-  //     <div className="h-screen flex items-center justify-center bg-gradient-to-br from-background via-background/95 to-background/90">
-  //       <div className="text-center space-y-4">
-  //         <div className="relative">
-  //           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 blur-xl opacity-20 animate-pulse"></div>
-  //           <Loader />
-  //         </div>
-  //         <p className="text-lg text-muted-foreground animate-pulse">Initializing environment...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
+    void init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleNewChat = () => {
-    if (window.confirm('Are you sure you want to start a new chat? This will clear your current progress.')) {
+    if (
+      window.confirm('Are you sure you want to start a new chat? This will clear your current progress.')
+    ) {
+      sessionStorage.clear();
       navigate('/');
       window.location.reload();
-    sessionStorage.clear();
     }
   };
 
-  // Function to process files one by one with slower animation
-  useEffect(() => {
-    if (processedFiles.length > 0 && currentFileIndex < processedFiles.length) {
-      const timer = setTimeout(() => {
-        setSelectedFile(processedFiles[currentFileIndex]);
-        setCurrentFileIndex(prev => prev + 1);
-      }, 3000); // Show each file for 3 seconds
-
-      return () => clearTimeout(timer);
-    } else if (currentFileIndex >= processedFiles.length) {
-      setIsFileAnimationComplete(true);
-    }
-  }, [processedFiles, currentFileIndex]);
-
-  // Function to handle follow-up messages
   const handleFollowUpMessage = async (message: string) => {
     try {
       const response = await axios.post(`${BACKEND_URL}/chat`, {
-        messages: [...llmMessages, { role: "user", content: message }]
+        messages: [...llmMessages, { role: 'user', content: message }],
       });
-      
-      setLlmMessages(prev => [...prev, 
-        { role: "user", content: message },
-        { role: "assistant", content: response.data }
+
+      const responseText: string = response.data?.response ?? '';
+      setLlmMessages(prev => [
+        ...prev,
+        { role: 'user', content: message },
+        { role: 'assistant', content: responseText },
       ]);
-    } catch (error) {
-      console.error('Error sending follow-up message:', error);
+
+      const followUpSteps = parseXml(responseText);
+      if (followUpSteps.length > 0) {
+        setSteps(prev => [
+          ...prev,
+          ...followUpSteps.map(x => ({ ...x, status: 'pending' as const })),
+        ]);
+      }
+    } catch (err) {
+      console.error('Error sending follow-up message:', err);
     }
   };
 
-  // Function to handle file animation completion
-  const handleFileAnimationComplete = () => {
-    setIsFileAnimationInProgress(false);
-    if (currentFileIndex < processedFiles.length - 1) {
-      setCurrentFileIndex(prev => prev + 1);
-    }
+  const handleFileSelect = (file: FileItem) => {
+    userSelectedFileRef.current = true;
+    setSelectedFile(file);
   };
 
-  // Effect to handle file switching
-  useEffect(() => {
-    if (processedFiles.length > 0 && !isFileAnimationInProgress && currentFileIndex < processedFiles.length) {
-      setSelectedFile(processedFiles[currentFileIndex]);
-      setIsFileAnimationInProgress(true);
-    }
-  }, [processedFiles, currentFileIndex, isFileAnimationInProgress]);
+  const showCodeLoading = chatLoading && !selectedFile && !error;
 
   return (
     <div className="h-screen flex flex-col bg-black text-white">
-      {/* Top Navigation Bar */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -372,7 +331,7 @@ export function Builder() {
           >
             <Menu className="w-5 h-5 text-muted-foreground" />
           </button>
-          <button 
+          <button
             onClick={handleNewChat}
             className="flex items-center space-x-2 px-3 py-2 hover:bg-secondary/80 rounded-lg text-sm transition-colors"
           >
@@ -384,8 +343,8 @@ export function Builder() {
           <button
             onClick={() => setActiveTab('code')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-              activeTab === 'code' 
-                ? 'bg-secondary text-secondary-foreground shadow-lg' 
+              activeTab === 'code'
+                ? 'bg-secondary text-secondary-foreground shadow-lg'
                 : 'text-muted-foreground hover:bg-secondary/80'
             }`}
           >
@@ -393,30 +352,26 @@ export function Builder() {
             <span>Code</span>
           </button>
           <button
-            onClick={() => {
-              setActiveTab('preview');
-              // Start installation when preview is clicked and files are ready
-              if (hasReceivedFiles && webcontainer && !hasStartedInstallation) {
-                setHasStartedInstallation(true);
-                setIsInstalling(true);
-                startInstallation();
-              }
-            }}
+            onClick={() => setActiveTab('preview')}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-              activeTab === 'preview' 
-                ? 'bg-secondary text-secondary-foreground shadow-lg' 
+              activeTab === 'preview'
+                ? 'bg-secondary text-secondary-foreground shadow-lg'
                 : 'text-muted-foreground hover:bg-secondary/80'
             }`}
           >
             <Eye className="w-4 h-4" />
             <span>Preview</span>
+            {installing && !serverUrl && (
+              <span className="ml-1 w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+            )}
+            {serverUrl && (
+              <span className="ml-1 w-2 h-2 rounded-full bg-green-400" />
+            )}
           </button>
         </div>
       </motion.div>
 
-      {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
         <AnimatePresence>
           {!sidebarCollapsed && (
             <motion.div
@@ -428,13 +383,12 @@ export function Builder() {
             >
               <div className="flex-1 overflow-hidden">
                 <div className="p-4">
-                  {/* Sidebar Tabs */}
                   <div className="flex border-b border-border/40 mb-4">
                     <button
                       onClick={() => setSidebarTab('files')}
                       className={`flex-1 py-2 px-4 flex items-center justify-center space-x-2 text-sm ${
-                        sidebarTab === 'files' 
-                          ? 'border-b-2 border-primary text-primary' 
+                        sidebarTab === 'files'
+                          ? 'border-b-2 border-primary text-primary'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -444,8 +398,8 @@ export function Builder() {
                     <button
                       onClick={() => setSidebarTab('chat')}
                       className={`flex-1 py-2 px-4 flex items-center justify-center space-x-2 text-sm ${
-                        sidebarTab === 'chat' 
-                          ? 'border-b-2 border-primary text-primary' 
+                        sidebarTab === 'chat'
+                          ? 'border-b-2 border-primary text-primary'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
@@ -454,7 +408,6 @@ export function Builder() {
                     </button>
                   </div>
 
-                  {/* Tab Content */}
                   <AnimatePresence mode="wait">
                     {sidebarTab === 'files' ? (
                       <motion.div
@@ -466,7 +419,7 @@ export function Builder() {
                         <FileExplorer
                           files={files}
                           selectedFile={selectedFile}
-                          onFileSelect={setSelectedFile}
+                          onFileSelect={handleFileSelect}
                         />
                       </motion.div>
                     ) : (
@@ -479,11 +432,11 @@ export function Builder() {
                       >
                         <FollowUpMessage
                           onSendMessage={handleFollowUpMessage}
-                          initialMessages={llmMessages.map(msg => ({
-                            id: Date.now().toString(),
+                          initialMessages={llmMessages.map((msg, i) => ({
+                            id: `${i}-${msg.role}`,
                             content: msg.content,
                             type: msg.role === 'user' ? 'user' : 'bot',
-                            timestamp: new Date()
+                            timestamp: new Date(),
                           }))}
                         />
                       </motion.div>
@@ -495,28 +448,27 @@ export function Builder() {
           )}
         </AnimatePresence>
 
-        {/* Main Editor Area */}
         <div className="flex-1 flex flex-col overflow-hidden bg-background/30">
-          {/* Editor Header */}
           <div className="h-10 border-b border-border/40 flex items-center px-4 backdrop-blur-sm">
             <div className="flex items-center space-x-2">
               {activeTab === 'code' ? (
                 <>
                   <Code2 className="w-4 h-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
-                    {selectedFile ? selectedFile.name : 'Select a file to edit'}
+                    {selectedFile ? selectedFile.path : 'Generating files...'}
                   </span>
                 </>
               ) : (
                 <>
                   <Eye className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Preview</span>
+                  <span className="text-sm text-muted-foreground">
+                    {serverUrl ? 'Live Preview' : installing ? 'Compiling…' : 'Preview'}
+                  </span>
                 </>
               )}
             </div>
           </div>
 
-          {/* Editor Content */}
           <div className="flex-1 overflow-hidden p-4">
             <AnimatePresence mode="wait">
               {activeTab === 'code' ? (
@@ -527,18 +479,34 @@ export function Builder() {
                   exit={{ opacity: 0 }}
                   className="h-full rounded-lg overflow-hidden border border-border/40 shadow-2xl"
                 >
-                  {selectedFile && (
-                    <CodeEditor
-                      file={selectedFile}
-                      onChange={(content) => {
-                        setFiles(files.map(f =>
-                          f.path === selectedFile.path
-                            ? { ...f, content }
-                            : f
-                        ));
-                      }}
-                      onAnimationComplete={handleFileAnimationComplete}
-                    />
+                  {error ? (
+                    <div className="h-full flex items-center justify-center bg-background/50 p-8">
+                      <div className="text-center space-y-3 max-w-md">
+                        <AlertCircle className="w-8 h-8 text-red-400 mx-auto" />
+                        <p className="text-sm text-red-400">{error}</p>
+                        <button
+                          onClick={handleNewChat}
+                          className="px-4 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors"
+                        >
+                          Start a new chat
+                        </button>
+                      </div>
+                    </div>
+                  ) : showCodeLoading ? (
+                    <div className="h-full flex items-center justify-center bg-background/50">
+                      <div className="text-center space-y-3">
+                        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+                        <p className="text-sm text-muted-foreground">Generating your code...</p>
+                      </div>
+                    </div>
+                  ) : selectedFile ? (
+                    <CodeEditor file={selectedFile} />
+                  ) : (
+                    <div className="h-full flex items-center justify-center bg-background/50">
+                      <p className="text-sm text-muted-foreground">
+                        Select a file from the explorer to view its contents.
+                      </p>
+                    </div>
                   )}
                 </motion.div>
               ) : (
@@ -549,23 +517,18 @@ export function Builder() {
                   exit={{ opacity: 0 }}
                   className="h-full rounded-lg overflow-hidden border border-border/40 shadow-2xl bg-white"
                 >
-                  {showInteractiveLoader ? (
-                    <InteractiveLoader
-                      onComplete={() => setShowInteractiveLoader(false)}
-                      files={processedFiles}
-                      onInstallDependencies={startInstallation}
-                      shouldStartInstallation={hasStartedInstallation}
-                    />
-                  ) : (
-                    <PreviewFrame webContainer={webcontainer || null} />
-                  )}
+                  <PreviewFrame
+                    url={serverUrl}
+                    installLog={installLog}
+                    installing={installing}
+                    chatCompleted={chatCompleted}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
 
-        {/* Right Sidebar - Steps */}
         <AnimatePresence>
           {!sidebarCollapsed && (
             <motion.div
@@ -579,17 +542,8 @@ export function Builder() {
                 <div className="p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-sm font-medium text-muted-foreground">Build Steps</h2>
-                    {isProcessing && (
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                        <span>Processing...</span>
-                      </div>
-                    )}
                   </div>
-                  <StepsList 
-                    steps={steps} 
-                    currentStep={currentStep}
-                  />
+                  <StepsList steps={steps} currentStep={1} />
                 </div>
               </div>
             </motion.div>

@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1779731853332,
+  "projectRoot": "/Users/krishnamohan/Desktop/projects/completed/CodeDock",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "be": {
+      "path": "be",
+      "purpose": null,
+      "fileCount": 10,
+      "lastAccessed": 1779731853299,
+      "keyFiles": [
+        "bun.lock",
+        "package-lock.json",
+        "package.json",
+        "tsconfig.json",
+        "tsconfig.tsbuildinfo"
+      ]
+    },
+    "frontend": {
+      "path": "frontend",
+      "purpose": null,
+      "fileCount": 16,
+      "lastAccessed": 1779731853313,
+      "keyFiles": [
+        "bun.lock",
+        "eslint.config.js",
+        "index.html",
+        "package-lock.json",
+        "package.json"
+      ]
+    },
+    "be/dist": {
+      "path": "be/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 4,
+      "lastAccessed": 1779731853317,
+      "keyFiles": [
+        "constants.js",
+        "index.js",
+        "prompts.js"
+      ]
+    },
+    "be/node_modules": {
+      "path": "be/node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 0,
+      "lastAccessed": 1779731853320,
+      "keyFiles": []
+    },
+    "be/src": {
+      "path": "be/src",
+      "purpose": "Source code",
+      "fileCount": 5,
+      "lastAccessed": 1779731853324,
+      "keyFiles": [
+        "constants.ts",
+        "index.ts",
+        "prompts.ts"
+      ]
+    },
+    "frontend/node_modules": {
+      "path": "frontend/node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 0,
+      "lastAccessed": 1779731853332,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "be/src/index.ts",
+      "accessCount": 5,
+      "lastAccessed": 1779731959629,
+      "type": "file"
+    },
+    {
+      "path": "be/src/constants.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779731882985,
+      "type": "file"
+    },
+    {
+      "path": "be/package.json",
+      "accessCount": 1,
+      "lastAccessed": 1779731887390,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

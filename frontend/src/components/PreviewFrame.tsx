@@ -1,97 +1,55 @@
-import { WebContainer } from '@webcontainer/api';
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Loader } from './Loader';
+import { useEffect, useRef } from 'react';
 
 interface PreviewFrameProps {
-  webContainer: WebContainer | null;
+  url: string | null;
+  installLog: string[];
+  installing: boolean;
+  chatCompleted: boolean;
 }
 
-export function PreviewFrame({ webContainer }: PreviewFrameProps) {
-  const [url, setUrl] = useState<string | null>(null);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingMessage, setLoadingMessage] = useState('Initializing preview...');
-  const [isLoading, setIsLoading] = useState(true);
+export function PreviewFrame({ url, installLog, installing, chatCompleted }: PreviewFrameProps) {
+  const logEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!webContainer) return;
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [installLog]);
 
-    // Listen for server ready event
-    webContainer.on('server-ready', (port, url) => {
-      setUrl(url);
-      setIsLoading(false);
-      setLoadingProgress(100);
-      console.log('--------------------------------');
-      console.log('🎉 Server is ready!');
-      console.log('🌐 URL:', url);
-      console.log('🔌 Port:', port);
-      console.log('--------------------------------');
-    });
-
-    // Start progress animation
-    const messages = [
-      'Initializing preview...',
-      'Installing dependencies...',
-      'Starting development server...',
-      'Compiling assets...',
-      'Almost ready...'
-    ];
-    
-    let currentMessageIndex = 0;
-    const progressInterval = setInterval(() => {
-      setLoadingProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          return 100;
-        }
-        return prev + 1;
-      });
-      
-      if (currentMessageIndex < messages.length - 1) {
-        currentMessageIndex++;
-        setLoadingMessage(messages[currentMessageIndex]);
-      }
-    }, 50);
-
-    return () => {
-      clearInterval(progressInterval);
-    };
-  }, [webContainer]);
-
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        <div className="text-center space-y-6 w-full max-w-md px-4">
-          <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 blur-xl opacity-20 animate-pulse"></div>
-            <div className="relative">
-              <Loader />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">{loadingMessage}</p>
-            <div className="w-full bg-secondary/20 rounded-full h-2">
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${loadingProgress}%` }}
-                transition={{ duration: 0.5 }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">{loadingProgress}%</p>
-          </div>
-        </div>
-      </div>
-    );
+  if (url) {
+    return <iframe className="w-full h-full bg-white border-0" src={url} title="Preview" />;
   }
 
-  if (!url) {
-    return (
-      <div className="h-full flex items-center justify-center text-gray-400">
-        <p className="text-sm text-muted-foreground">Preview not available</p>
-      </div>
-    );
-  }
+  const statusText = !chatCompleted
+    ? 'Waiting for code generation...'
+    : installing
+    ? 'Installing dependencies & starting dev server...'
+    : 'Preparing preview...';
 
-  return <iframe width="100%" height="100%" src={url} />;
+  return (
+    <div className="h-full flex flex-col bg-black text-green-400 font-mono text-xs">
+      <div className="border-b border-border/40 px-4 py-2 flex items-center space-x-2 bg-secondary/30 flex-shrink-0">
+        {installing ? (
+          <div className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+        )}
+        <span className="text-muted-foreground">{statusText}</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+        {installLog.length === 0 ? (
+          <div className="text-muted-foreground/70">
+            The live preview will appear here once the dev server is ready.
+          </div>
+        ) : (
+          <>
+            {installLog.map((line, i) => (
+              <div key={i} className="whitespace-pre-wrap break-all leading-relaxed">
+                {line}
+              </div>
+            ))}
+            <div ref={logEndRef} />
+          </>
+        )}
+      </div>
+    </div>
+  );
 }

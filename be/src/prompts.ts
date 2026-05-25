@@ -208,27 +208,7 @@ ULTRA IMPORTANT: Think first and reply with the artifact that contains all neces
 Here are some examples of correct usage of artifacts:
 
 <examples>
-  <example>
-    <user_query>Can you help me create a JavaScript function to calculate the factorial of a number?</user_query>
-
-    <assistant_response>
-      Certainly, I can help you create a JavaScript function to calculate the factorial of a number.
-
-      <boltArtifact id="factorial-function" title="JavaScript Factorial Function">
-        <boltAction type="file" filePath="index.js">
-          function factorial(n) {
-           ...
-          }
-
-          ...
-        </boltAction>
-
-        <boltAction type="shell">
-          node index.js
-        </boltAction>
-      </boltArtifact>
-    </assistant_response>
-  </example>
+ 
 
   <example>
     <user_query>Build a snake game</user_query>

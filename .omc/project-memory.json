@@ -98,8 +98,14 @@
   "hotPaths": [
     {
       "path": "be/src/index.ts",
-      "accessCount": 5,
-      "lastAccessed": 1779731959629,
+      "accessCount": 6,
+      "lastAccessed": 1779735997755,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/steps.ts",
+      "accessCount": 2,
+      "lastAccessed": 1779736046827,
       "type": "file"
     },
     {
@@ -112,6 +118,18 @@
       "path": "be/package.json",
       "accessCount": 1,
       "lastAccessed": 1779731887390,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/pages/Builder.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779735988527,
+      "type": "file"
+    },
+    {
+      "path": "be/src/prompts.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779735997493,
       "type": "file"
     }
   ],

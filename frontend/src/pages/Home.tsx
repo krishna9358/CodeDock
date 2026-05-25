@@ -183,7 +183,7 @@ export function Home() {
       {/* Navbar */}
       <div className="top-navbar">
         <div className="flex-1 text-white">
-          Naxora 🚀
+          Genos
         </div>
         <div>
           <WalletMultiButton />
@@ -236,7 +236,7 @@ export function Home() {
                 </h1>
                 <p className="text-xl text-blue-200 mb-8"
                    style={{ animation: "slideUp 0.6s ease-out 1s both" }}>
-                  Speak or type your vision. Nexora invokes an autonomous agent to build it.
+                  Speak or type your vision. Genos invokes an autonomous agent to build it.
                 </p>
               </div>
 
@@ -290,16 +290,14 @@ export function Home() {
         
         {/* Social Icons */}
         <div className="social-icons">
-          <a href="https://x.com/krshxxna" className="social-icon">
-            <Twitter className="w-5 h-5 text-blue-400" />
-          </a>
-          <a href="https://www.linkedin.com/in/krishna-mohan-194124167/" className="social-icon">
-            <Linkedin className="w-5 h-5 text-blue-400" />
-          </a>
-          <a href="mailto:krishanmohank974@gmail.com" target='_blank' className="social-icon">
-            <Mail className="w-5 h-5 text-blue-400" />
-          </a>
-        </div>
+
+<a href="https://www.linkedin.com/in/kislayvats/" className="social-icon">
+  <Linkedin className="w-5 h-5 text-blue-400" />
+</a>
+<a href="mailto:kislayvats22@gmail.com" target='_blank' className="social-icon">
+  <Mail className="w-5 h-5 text-blue-400" />
+</a>
+</div>
       </div>
     </>
   );
